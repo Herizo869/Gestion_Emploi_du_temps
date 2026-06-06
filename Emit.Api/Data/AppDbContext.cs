@@ -1,0 +1,68 @@
+using Emit.Api.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace Emit.Api.Data;
+
+public class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> opt) : base(opt) { }
+
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Enseignant> Enseignants => Set<Enseignant>();
+    public DbSet<Salle> Salles => Set<Salle>();
+    public DbSet<Niveau> Niveaux => Set<Niveau>();
+    public DbSet<Filiere> Filieres => Set<Filiere>();
+    public DbSet<Cours> Cours => Set<Cours>();
+    public DbSet<CoursEnseignant> CoursEnseignants => Set<CoursEnseignant>();
+    public DbSet<Semestre> Semestres => Set<Semestre>();
+    public DbSet<SlotEDT> Slots => Set<SlotEDT>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<LogEntry> Journal => Set<LogEntry>();
+
+    protected override void OnModelCreating(ModelBuilder b)
+    {
+        b.Entity<User>().HasIndex(u => u.Email).IsUnique();
+        b.Entity<User>()
+            .HasOne(u => u.Enseignant)
+            .WithMany()
+            .HasForeignKey(u => u.EnseignantId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        b.Entity<Enseignant>().HasIndex(e => e.Email).IsUnique();
+        b.Entity<Salle>().HasIndex(s => s.Numero).IsUnique();
+
+        b.Entity<CoursEnseignant>().HasKey(x => new { x.CoursId, x.EnseignantId });
+        b.Entity<CoursEnseignant>()
+            .HasOne(x => x.Cours).WithMany(c => c.Enseignants).HasForeignKey(x => x.CoursId);
+        b.Entity<CoursEnseignant>()
+            .HasOne(x => x.Enseignant).WithMany(e => e.Cours).HasForeignKey(x => x.EnseignantId);
+
+        b.Entity<Filiere>()
+            .HasOne(f => f.Niveau).WithMany(n => n.Filieres)
+            .HasForeignKey(f => f.NiveauId).OnDelete(DeleteBehavior.Cascade);
+
+        b.Entity<Cours>()
+            .HasOne(c => c.Niveau).WithMany(n => n.Cours)
+            .HasForeignKey(c => c.NiveauId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<Cours>()
+            .HasOne(c => c.Filiere).WithMany(f => f.Cours)
+            .HasForeignKey(c => c.FiliereId).OnDelete(DeleteBehavior.Restrict);
+
+        b.Entity<SlotEDT>()
+            .HasIndex(s => new { s.SemestreId, s.Jour, s.HeureDebut, s.EnseignantId }).IsUnique();
+        b.Entity<SlotEDT>()
+            .HasIndex(s => new { s.SemestreId, s.Jour, s.HeureDebut, s.SalleId }).IsUnique();
+        b.Entity<SlotEDT>()
+            .HasIndex(s => new { s.SemestreId, s.Jour, s.HeureDebut, s.NiveauId, s.FiliereId }).IsUnique();
+
+        b.Entity<SlotEDT>().HasOne(s => s.Cours).WithMany(c => c.Slots).HasForeignKey(s => s.CoursId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<SlotEDT>().HasOne(s => s.Enseignant).WithMany(e => e.Slots).HasForeignKey(s => s.EnseignantId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<SlotEDT>().HasOne(s => s.Salle).WithMany(sa => sa.Slots).HasForeignKey(s => s.SalleId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<SlotEDT>().HasOne(s => s.Niveau).WithMany().HasForeignKey(s => s.NiveauId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<SlotEDT>().HasOne(s => s.Filiere).WithMany().HasForeignKey(s => s.FiliereId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<SlotEDT>().HasOne(s => s.Semestre).WithMany(se => se.Slots).HasForeignKey(s => s.SemestreId).OnDelete(DeleteBehavior.Cascade);
+
+        b.Entity<Notification>()
+            .HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
