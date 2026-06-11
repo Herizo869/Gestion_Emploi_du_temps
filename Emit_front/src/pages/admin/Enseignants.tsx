@@ -10,7 +10,7 @@ import { apiCreateEnseignant, apiUpdateEnseignant, apiDeleteEnseignant } from "@
 import type { Enseignant } from "@/types";
 
 const statutTone = { permanent: "green", vacataire: "orange", invite: "purple" } as const;
-const empty = { prenom: "", nom: "", email: "", specialite: "", statut: "permanent" as const, nbCours: 0, id: "" };
+const empty = { prenom: "", nom: "", email: "", specialite: "", statut: "Permanent" };
 
 export default function AdminEnseignants() {
   const { enseignants: items, refresh } = useData();
@@ -49,10 +49,11 @@ export default function AdminEnseignants() {
     if (!form.prenom || !form.nom || !form.email) return setError("Prénom, nom et email requis");
     setSaving(true); setError(null);
     try {
+      const { id, nbCours, ...payload } = form as any;
       if (editTarget) {
-        await apiUpdateEnseignant(editTarget.id, form);
+        await apiUpdateEnseignant(editTarget.id, payload);
       } else {
-        await apiCreateEnseignant(form);
+        await apiCreateEnseignant(payload);
       }
       await refresh();
       setOpen(false);
