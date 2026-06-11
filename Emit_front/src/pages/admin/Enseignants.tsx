@@ -175,11 +175,11 @@ export default function AdminEnseignants() {
           <Input label="Spécialité" placeholder="Génie logiciel" value={form.specialite} onChange={f("specialite")} />
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Statut</label>
-            <select value={form.statut} onChange={f("statut")} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
-              <option value="permanent">Permanent</option>
-              <option value="vacataire">Vacataire</option>
-              <option value="invite">Invité</option>
-            </select>
+          <select value={form.statut} onChange={f("statut")} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
+            <option value="Permanent">Permanent</option>
+            <option value="Vacataire">Vacataire</option>
+            <option value="Invite">Invité</option>
+          </select>
           </div>
         </div>
       </Modal>
