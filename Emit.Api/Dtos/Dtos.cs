@@ -44,6 +44,7 @@ public class FiliereDto
     public Guid Id { get; set; }
     public string Libelle { get; set; } = "";
     public string Description { get; set; } = "";
+    public string Domaine { get; set; } = "";
     public int NbCours { get; set; }
 }
 
