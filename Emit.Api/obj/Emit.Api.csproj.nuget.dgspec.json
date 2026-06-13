@@ -1,24 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Herizo Draken\\Documents\\EMIT\\ASPNet\\Emit.Api\\Emit.Api.csproj": {}
+    "D:\\projet L3\\projetn asp\\Gestion_Emploi_du_temps\\Emit.Api\\Emit.Api.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Herizo Draken\\Documents\\EMIT\\ASPNet\\Emit.Api\\Emit.Api.csproj": {
+    "D:\\projet L3\\projetn asp\\Gestion_Emploi_du_temps\\Emit.Api\\Emit.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Herizo Draken\\Documents\\EMIT\\ASPNet\\Emit.Api\\Emit.Api.csproj",
+        "projectUniqueName": "D:\\projet L3\\projetn asp\\Gestion_Emploi_du_temps\\Emit.Api\\Emit.Api.csproj",
         "projectName": "Emit.Api",
-        "projectPath": "C:\\Users\\Herizo Draken\\Documents\\EMIT\\ASPNet\\Emit.Api\\Emit.Api.csproj",
-        "packagesPath": "C:\\Users\\Herizo Draken\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Herizo Draken\\Documents\\EMIT\\ASPNet\\Emit.Api\\obj\\",
+        "projectPath": "D:\\projet L3\\projetn asp\\Gestion_Emploi_du_temps\\Emit.Api\\Emit.Api.csproj",
+        "packagesPath": "C:\\Users\\IPhone 17Pro Max\\.nuget\\packages\\",
+        "outputPath": "D:\\projet L3\\projetn asp\\Gestion_Emploi_du_temps\\Emit.Api\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Herizo Draken\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\IPhone 17Pro Max\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -30,7 +26,6 @@
         },
         "frameworks": {
           "net8.0": {
-            "framework": "net8.0",
             "targetAlias": "net8.0",
             "projectReferences": {}
           }
@@ -44,12 +39,10 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "10.0.300"
+        }
       },
       "frameworks": {
         "net8.0": {
-          "framework": "net8.0",
           "targetAlias": "net8.0",
           "dependencies": {
             "AutoMapper.Extensions.Microsoft.DependencyInjection": {
@@ -101,7 +94,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.422/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
