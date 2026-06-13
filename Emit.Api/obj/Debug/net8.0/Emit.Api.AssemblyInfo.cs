@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Emit.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+70462239e64b25176015354a60ce4991a0fa67b5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e7eccd1a7c28e0a465e35684de91734f001c4b07")]
 [assembly: System.Reflection.AssemblyProductAttribute("Emit.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Emit.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
