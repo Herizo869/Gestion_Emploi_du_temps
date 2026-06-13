@@ -1,7 +1,1 @@
-bin/
-obj/
-*.user
-.vs/
-.idea/
-appsettings.Production.json
-*.db
+
