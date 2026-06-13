@@ -38,8 +38,10 @@ export interface Cours {
   type: CoursType;
   volumeHoraire: number;
   heuresPlanifiees: number;
-  niveau: string;
-  filiere: string;
+  niveauId: string;
+  niveauLibelle: string;
+  filiereId: string;
+  filiereLibelle: string;
   enseignantIds: string[];
 }
 
