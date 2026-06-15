@@ -1,1 +1,11 @@
-{"Version":1,"Hash":"nhG1bbcRgW/cAqsRHe5EurUs2uuRhOA5QEKIz6Z7F6M=","Source":"Emit.Api","BasePath":"/","Mode":"Root","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}
+{
+  "Version": 1,
+  "Hash": "dkoM05VbTjXpho6YLd0WoETowRh8XNb0megJZ6iaPes=",
+  "Source": "Emit.Api",
+  "BasePath": "_content/Emit.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
