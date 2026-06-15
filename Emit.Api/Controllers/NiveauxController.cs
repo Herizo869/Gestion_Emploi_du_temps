@@ -53,4 +53,16 @@ public class FilieresController : ControllerBase
         await _db.SaveChangesAsync();
         return Ok(_map.Map<FiliereDto>(f));
     }
+
+    [HttpDelete("{id:guid}"), Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var f = await _db.Filieres.FindAsync(id);
+        if (f is null) return NotFound();
+        _db.Filieres.Remove(f);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    
 }

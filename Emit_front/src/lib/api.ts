@@ -7,7 +7,7 @@
 // puis injecté en header `Authorization: Bearer <token>`.
 
 import type {
-  Enseignant, Salle, Cours, Niveau, Semestre,
+  Enseignant, Salle, Cours, Niveau, Filiere, Semestre,
   SlotEDT, Notif, LogEntry, User,
 } from "@/types";
 
@@ -76,6 +76,12 @@ export const apiDeleteSalle = (id: string) =>
 
 // ───── Niveaux & Filières ──────────────────────────────────
 export const apiNiveaux = () => request<Niveau[]>("/api/niveaux");
+export const apiCreateNiveau = (data: { libelle: string; effectifMax: number }) =>
+  request<Niveau>("/api/niveaux", { method: "POST", body: JSON.stringify(data) });
+export const apiCreateFiliere = (niveauId: string, data: { libelle: string; description: string }) =>
+  request<Filiere>(`/api/filieres?niveauId=${niveauId}`, { method: "POST", body: JSON.stringify(data) });
+export const apiDeleteFiliere = (id: string) =>
+  request<void>(`/api/filieres/${id}`, { method: "DELETE" });
 
 // ───── Cours ───────────────────────────────────────────────
 export const apiCours = () => request<Cours[]>("/api/cours");
@@ -88,8 +94,14 @@ export const apiDeleteCours = (id: string) =>
 
 // ───── Semestres ───────────────────────────────────────────
 export const apiSemestres = () => request<Semestre[]>("/api/semestres");
+export const apiCreateSemestre = (data: { libelle: string; annee: string }) =>
+  request<Semestre>("/api/semestres", { method: "POST", body: JSON.stringify(data) });
 export const apiPublierSemestre = (id: string) =>
   request<Semestre>(`/api/semestres/${id}/publier`, { method: "POST" });
+export const apiArchiverSemestre = (id: string) =>
+  request<Semestre>(`/api/semestres/${id}/archiver`, { method: "POST" });
+export const apiDupliquerSemestre = (id: string) =>
+  request<Semestre>(`/api/semestres/${id}/dupliquer`, { method: "POST" });
 
 // ───── EDT ─────────────────────────────────────────────────
 export const apiEdt = (params: {
@@ -122,3 +134,11 @@ export const apiSaveMyDispos = (dispos: Dispo[]) =>
   request<void>("/api/disponibilites/me", { method: "PUT", body: JSON.stringify(dispos) });
 export const apiDisposEnseignant = (enseignantId: string) =>
   request<Dispo[]>(`/api/disponibilites/${enseignantId}`);
+
+
+// ───── Disponibilités (Admin) ───────────────────────────────
+export const apiSaveDisponibilites = (enseignantId: string, disponibilites: any[]) =>
+  request<void>(`/api/disponibilites/${enseignantId}`, {
+    method: "POST",
+    body: JSON.stringify(disponibilites)
+  });
