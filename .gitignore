@@ -1,2 +1,4 @@
 node_modules
-
+app
+Emit.Api/bin/
+Emit.Api/obj/
