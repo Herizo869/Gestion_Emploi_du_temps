@@ -49,6 +49,7 @@ export interface Filiere {
   id: string;
   libelle: string;
   description: string;
+  domaine?: string;
   nbCours: number;
 }
 export interface Niveau {

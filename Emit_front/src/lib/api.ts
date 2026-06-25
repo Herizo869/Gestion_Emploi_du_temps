@@ -133,4 +133,16 @@ export const apiMyDispos = () => request<Dispo[]>("/api/disponibilites/me");
 export const apiSaveMyDispos = (dispos: Dispo[]) =>
   request<void>("/api/disponibilites/me", { method: "PUT", body: JSON.stringify(dispos) });
 export const apiDisposEnseignant = (enseignantId: string) =>
+<<<<<<< HEAD
   request<Dispo[]>(`/api/disponibilites/${enseignantId}`);
+=======
+  request<Dispo[]>(`/api/disponibilites/${enseignantId}`);
+
+
+// ───── Disponibilités (Admin) ───────────────────────────────
+export const apiSaveDisponibilites = (enseignantId: string, disponibilites: any[]) =>
+  request<void>(`/api/disponibilites/${enseignantId}`, {
+    method: "POST",
+    body: JSON.stringify(disponibilites)
+  });
+>>>>>>> fe3373c6efc0fe168519200b4d7da1e9cc98398e

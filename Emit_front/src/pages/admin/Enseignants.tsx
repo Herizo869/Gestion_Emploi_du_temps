@@ -10,7 +10,14 @@ import { apiCreateEnseignant, apiUpdateEnseignant, apiDeleteEnseignant } from "@
 import type { Enseignant } from "@/types";
 
 const statutTone = { permanent: "green", vacataire: "orange", invite: "purple" } as const;
-const empty = { prenom: "", nom: "", email: "", specialite: "", statut: "Permanent" };
+const empty: Omit<Enseignant, "id"> = {
+  prenom: "",
+  nom: "",
+  email: "",
+  specialite: "",
+  statut: "permanent",
+  nbCours: 0,
+};
 
 export default function AdminEnseignants() {
   const { enseignants: items, refresh } = useData();
@@ -177,9 +184,9 @@ export default function AdminEnseignants() {
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Statut</label>
           <select value={form.statut} onChange={f("statut")} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
-            <option value="Permanent">Permanent</option>
-            <option value="Vacataire">Vacataire</option>
-            <option value="Invite">Invité</option>
+            <option value="permanent">Permanent</option>
+            <option value="vacataire">Vacataire</option>
+            <option value="invite">Invité</option>
           </select>
           </div>
         </div>
