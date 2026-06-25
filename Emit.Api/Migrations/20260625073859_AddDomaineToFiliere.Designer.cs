@@ -3,6 +3,7 @@ using System;
 using Emit.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Emit.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260625073859_AddDomaineToFiliere")]
+    partial class AddDomaineToFiliere
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -69,36 +72,6 @@ namespace Emit.Api.Migrations
                     b.HasIndex("EnseignantId");
 
                     b.ToTable("CoursEnseignants");
-                });
-
-            modelBuilder.Entity("Emit.Api.Entities.Disponibilite", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Creneau")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("EnseignantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("EstDisponible")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("EstIndisponible")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Jour")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EnseignantId");
-
-                    b.ToTable("Disponibilites");
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.Enseignant", b =>
@@ -437,17 +410,6 @@ namespace Emit.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Cours");
-
-                    b.Navigation("Enseignant");
-                });
-
-            modelBuilder.Entity("Emit.Api.Entities.Disponibilite", b =>
-                {
-                    b.HasOne("Emit.Api.Entities.Enseignant", "Enseignant")
-                        .WithMany()
-                        .HasForeignKey("EnseignantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Enseignant");
                 });

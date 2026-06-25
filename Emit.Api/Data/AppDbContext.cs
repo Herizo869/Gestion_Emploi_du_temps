@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<SlotEDT> Slots => Set<SlotEDT>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<LogEntry> Journal => Set<LogEntry>();
+    public DbSet<Disponibilite> Disponibilites => Set<Disponibilite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
