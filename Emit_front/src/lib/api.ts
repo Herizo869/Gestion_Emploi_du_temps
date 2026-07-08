@@ -1,11 +1,3 @@
-// ============================================================
-// Client API EMIT — branché sur le backend ASP.NET Core
-// ============================================================
-//
-// Configurer l'URL via .env  →  VITE_API_URL=https://localhost:5001
-// Le token JWT (issu de /api/auth/login) est stocké dans localStorage
-// puis injecté en header `Authorization: Bearer <token>`.
-
 import type {
   Enseignant, Salle, Cours, Niveau, Filiere, Semestre,
   SlotEDT, Notif, LogEntry, User,
@@ -116,8 +108,19 @@ export const apiEdt = (params: {
 };
 export const apiEdtMe = (semestreId?: string) =>
   request<SlotEDT[]>(`/api/edt/me${semestreId ? `?semestreId=${semestreId}` : ""}`);
+export interface Conflit {
+  id: string;
+  type: string;
+  description: string;
+  date: string;
+}
+export interface GenerationEdtResult {
+  slotsCrees: number;
+  coursNonPlanifies: string[];
+  conflits: Conflit[];
+}
 export const apiGenererEdt = (semestreId: string) =>
-  request<{ slots: SlotEDT[]; conflits: number }>(`/api/edt/generate/${semestreId}`, { method: "POST" });
+  request<GenerationEdtResult>(`/api/edt/generate/${semestreId}`, { method: "POST" });
 
 // ───── Notifications ───────────────────────────────────────
 export const apiNotifications = () => request<Notif[]>("/api/notifications");
@@ -127,22 +130,12 @@ export const apiMarkNotifRead = (id: string) =>
 // ───── Journal / Historique ────────────────────────────────
 export const apiJournal = () => request<LogEntry[]>("/api/journal");
 
-// ───── Disponibilités enseignant ───────────────────────────
-export interface Dispo { jour: string; debut: string; fin: string; }
+// ───── Disponibilités ──────────────────────────────────────
+export interface Dispo { jour: string; creneau: string; estDisponible: boolean; estIndisponible: boolean; }
 export const apiMyDispos = () => request<Dispo[]>("/api/disponibilites/me");
 export const apiSaveMyDispos = (dispos: Dispo[]) =>
   request<void>("/api/disponibilites/me", { method: "PUT", body: JSON.stringify(dispos) });
 export const apiDisposEnseignant = (enseignantId: string) =>
-<<<<<<< HEAD
   request<Dispo[]>(`/api/disponibilites/${enseignantId}`);
-=======
-  request<Dispo[]>(`/api/disponibilites/${enseignantId}`);
-
-
-// ───── Disponibilités (Admin) ───────────────────────────────
-export const apiSaveDisponibilites = (enseignantId: string, disponibilites: any[]) =>
-  request<void>(`/api/disponibilites/${enseignantId}`, {
-    method: "POST",
-    body: JSON.stringify(disponibilites)
-  });
->>>>>>> fe3373c6efc0fe168519200b4d7da1e9cc98398e
+export const apiSaveDisponibilites = (enseignantId: string, disponibilites: Dispo[]) =>
+  request<void>(`/api/disponibilites/${enseignantId}`, { method: "PUT", body: JSON.stringify(disponibilites) });

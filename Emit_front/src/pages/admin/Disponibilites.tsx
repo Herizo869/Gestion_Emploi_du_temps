@@ -2,10 +2,14 @@ import { useState, useEffect } from "react";
 import { AlertTriangle, Save, Loader2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { CRENEAUX, JOURS } from "@/data/mock";
 import { useData } from "@/context/DataContext";
 import { apiSaveDisponibilites } from "@/lib/api";
 import type { Enseignant } from "@/types";
+const CRENEAUX = [
+  "07h30 - 09h00", "09h15 - 10h45", "11h00 - 12h30",
+  "13h30 - 15h00", "15h15 - 16h45", "17h00 - 18h30",
+];
+const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"] as const;
 
 type State = "dispo" | "indispo" | "vide";
 
