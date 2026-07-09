@@ -81,7 +81,9 @@ export interface SlotEDT {
   coursId: string;
   intitule: string;
   type: CoursType;
+  enseignantId: string;
   enseignant: string;
+  salleId: string;
   salle: string;
   niveau: string;
   filiere: string;

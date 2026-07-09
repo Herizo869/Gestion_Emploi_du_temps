@@ -54,6 +54,80 @@ public class EdtController : ControllerBase
     public async Task<ActionResult<List<ConflitDto>>> Conflits(Guid semestreId)
         => Ok(await _gen.DetectConflitsAsync(semestreId));
 
+    // PUT /api/edt/{id} — Admin : modification manuelle d'un créneau
+    [HttpPut("{id:guid}"), Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] SlotUpdateDto dto)
+    {
+        var slot = await Base().FirstOrDefaultAsync(s => s.Id == id);
+        if (slot is null) return NotFound();
+
+        if (!TimeOnly.TryParse(dto.HeureDebut, out var heureDebut) ||
+            !TimeOnly.TryParse(dto.HeureFin, out var heureFin))
+            return BadRequest(new { message = "Format d'heure invalide (attendu HH:mm)." });
+
+        // Conflit : même semestre, même jour, même heure de début,
+        // même salle ou même enseignant, sur un créneau différent.
+        var autresSlots = await _db.Slots
+            .Include(s => s.Salle).Include(s => s.Enseignant)
+            .Where(s => s.SemestreId == slot.SemestreId && s.Id != id
+                     && s.Jour == dto.Jour && s.HeureDebut == heureDebut)
+            .ToListAsync();
+
+        var conflitSalle = autresSlots.FirstOrDefault(s => s.SalleId == dto.SalleId);
+        var conflitEnseignant = autresSlots.FirstOrDefault(s => s.EnseignantId == dto.EnseignantId);
+
+        if (conflitSalle != null || conflitEnseignant != null)
+        {
+            var conflits = new List<ConflitDto>();
+            if (conflitSalle != null)
+                conflits.Add(new ConflitDto
+                {
+                    Id = $"S-{conflitSalle.SalleId}-{dto.Jour}-{heureDebut:HH\\:mm}",
+                    Type = "Salle",
+                    Description = $"{conflitSalle.Salle.Numero} déjà occupée le {dto.Jour} à {heureDebut:HH\\:mm}",
+                    Date = DateTime.UtcNow
+                });
+            if (conflitEnseignant != null)
+                conflits.Add(new ConflitDto
+                {
+                    Id = $"E-{conflitEnseignant.EnseignantId}-{dto.Jour}-{heureDebut:HH\\:mm}",
+                    Type = "Enseignant",
+                    Description = $"{conflitEnseignant.Enseignant.Prenom[0]}. {conflitEnseignant.Enseignant.Nom} déjà occupé(e) le {dto.Jour} à {heureDebut:HH\\:mm}",
+                    Date = DateTime.UtcNow
+                });
+
+            var occupees = autresSlots.Select(s => s.SalleId).ToHashSet();
+            var sallesLibres = await _db.Salles
+                .Where(s => s.Disponible && !occupees.Contains(s.Id))
+                .Select(s => s.Numero)
+                .ToListAsync();
+
+            return Conflict(new SlotConflitResponse
+            {
+                Message = "Conflit détecté sur ce créneau.",
+                Conflits = conflits,
+                SallesLibres = sallesLibres
+            });
+        }
+
+        slot.SalleId = dto.SalleId;
+        slot.EnseignantId = dto.EnseignantId;
+        slot.Jour = dto.Jour;
+        slot.HeureDebut = heureDebut;
+        slot.HeureFin = heureFin;
+
+        _db.Journal.Add(new Entities.LogEntry
+        {
+            Action = Entities.LogAction.Modification,
+            Entite = $"Créneau {slot.Cours?.Intitule} modifié"
+        });
+
+        await _db.SaveChangesAsync();
+
+        var updated = await Base().FirstAsync(s => s.Id == id);
+        return Ok(SlotMapper.ToDto(updated));
+    }
+
     [HttpDelete("{id:guid}"), Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(Guid id)
     {

@@ -28,17 +28,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
+    let body: any = null;
     try {
-      const j = await res.json();
-      msg = j.message ?? j.error ?? msg;
+      body = await res.json();
+      msg = body.message ?? body.error ?? msg;
     } catch { /* ignore */ }
-    throw new Error(msg);
+    const err = new Error(msg) as Error & { status?: number; body?: any };
+    err.status = res.status;
+    err.body = body;
+    throw err;
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
-// ───── Auth ────────────────────────────────────────────────
+// ───── Auth
 export interface LoginResponse { token: string; user: User; }
 export const apiLogin = (email: string, password: string) =>
   request<LoginResponse>("/api/auth/login", {
@@ -48,7 +52,7 @@ export const apiLogin = (email: string, password: string) =>
 
 export const apiMe = () => request<User>("/api/auth/me");
 
-// ───── Enseignants ─────────────────────────────────────────
+// ───── Enseignants
 export const apiEnseignants = () => request<Enseignant[]>("/api/enseignants");
 export const apiCreateEnseignant = (e: Partial<Enseignant>) =>
   request<Enseignant>("/api/enseignants", { method: "POST", body: JSON.stringify(e) });
@@ -57,7 +61,7 @@ export const apiUpdateEnseignant = (id: string, e: Partial<Enseignant>) =>
 export const apiDeleteEnseignant = (id: string) =>
   request<void>(`/api/enseignants/${id}`, { method: "DELETE" });
 
-// ───── Salles ──────────────────────────────────────────────
+// ───── Salles
 export const apiSalles = () => request<Salle[]>("/api/salles");
 export const apiCreateSalle = (s: Partial<Salle>) =>
   request<Salle>("/api/salles", { method: "POST", body: JSON.stringify(s) });
@@ -66,7 +70,7 @@ export const apiUpdateSalle = (id: string, s: Partial<Salle>) =>
 export const apiDeleteSalle = (id: string) =>
   request<void>(`/api/salles/${id}`, { method: "DELETE" });
 
-// ───── Niveaux & Filières ──────────────────────────────────
+// ───── Niveaux & Filières
 export const apiNiveaux = () => request<Niveau[]>("/api/niveaux");
 export const apiCreateNiveau = (data: { libelle: string; effectifMax: number }) =>
   request<Niveau>("/api/niveaux", { method: "POST", body: JSON.stringify(data) });
@@ -75,7 +79,7 @@ export const apiCreateFiliere = (niveauId: string, data: { libelle: string; desc
 export const apiDeleteFiliere = (id: string) =>
   request<void>(`/api/filieres/${id}`, { method: "DELETE" });
 
-// ───── Cours ───────────────────────────────────────────────
+// ───── Cours
 export const apiCours = () => request<Cours[]>("/api/cours");
 export const apiCreateCours = (c: Partial<Cours>) =>
   request<Cours>("/api/cours", { method: "POST", body: JSON.stringify(c) });
@@ -84,7 +88,7 @@ export const apiUpdateCours = (id: string, c: Partial<Cours>) =>
 export const apiDeleteCours = (id: string) =>
   request<void>(`/api/cours/${id}`, { method: "DELETE" });
 
-// ───── Semestres ───────────────────────────────────────────
+// ───── Semestres 
 export const apiSemestres = () => request<Semestre[]>("/api/semestres");
 export const apiCreateSemestre = (data: { libelle: string; annee: string }) =>
   request<Semestre>("/api/semestres", { method: "POST", body: JSON.stringify(data) });
@@ -95,25 +99,22 @@ export const apiArchiverSemestre = (id: string) =>
 export const apiDupliquerSemestre = (id: string) =>
   request<Semestre>(`/api/semestres/${id}/dupliquer`, { method: "POST" });
 
-// ───── EDT ─────────────────────────────────────────────────
+// ───── EDT 
 export const apiEdt = (params: {
-  niveau?: string; filiere?: string; semestreId?: string;
+  niveauId?: string; filiereId?: string; semestreId?: string; salleId?: string;
 } = {}) => {
   const q = new URLSearchParams();
-  if (params.niveau) q.set("niveau", params.niveau);
-  if (params.filiere) q.set("filiere", params.filiere);
+  if (params.niveauId) q.set("niveauId", params.niveauId);
+  if (params.filiereId) q.set("filiereId", params.filiereId);
   if (params.semestreId) q.set("semestreId", params.semestreId);
+  if (params.salleId) q.set("salleId", params.salleId);
   const s = q.toString();
   return request<SlotEDT[]>(`/api/edt${s ? `?${s}` : ""}`);
 };
 export const apiEdtMe = (semestreId?: string) =>
   request<SlotEDT[]>(`/api/edt/me${semestreId ? `?semestreId=${semestreId}` : ""}`);
-export interface Conflit {
-  id: string;
-  type: string;
-  description: string;
-  date: string;
-}
+
+export interface Conflit { id: string; type: string; description: string; date: string; }
 export interface GenerationEdtResult {
   slotsCrees: number;
   coursNonPlanifies: string[];
@@ -122,15 +123,27 @@ export interface GenerationEdtResult {
 export const apiGenererEdt = (semestreId: string) =>
   request<GenerationEdtResult>(`/api/edt/generate/${semestreId}`, { method: "POST" });
 
-// ───── Notifications ───────────────────────────────────────
+export interface ConflitInfo { id: string; type: string; description: string; date: string; }
+export interface SlotConflitError { message: string; conflits: ConflitInfo[]; sallesLibres: string[]; }
+export interface SlotUpdatePayload {
+  salleId: string;
+  enseignantId: string;
+  jour: SlotEDT["jour"];
+  heureDebut: string;
+  heureFin: string;
+}
+export const apiUpdateSlot = (id: string, data: SlotUpdatePayload) =>
+  request<SlotEDT>(`/api/edt/${id}`, { method: "PUT", body: JSON.stringify(data) });
+
+// ───── Notifications
 export const apiNotifications = () => request<Notif[]>("/api/notifications");
 export const apiMarkNotifRead = (id: string) =>
   request<Notif>(`/api/notifications/${id}/read`, { method: "POST" });
 
-// ───── Journal / Historique ────────────────────────────────
+// ───── Journal / Historique
 export const apiJournal = () => request<LogEntry[]>("/api/journal");
 
-// ───── Disponibilités ──────────────────────────────────────
+// ───── Disponibilités
 export interface Dispo { jour: string; creneau: string; estDisponible: boolean; estIndisponible: boolean; }
 export const apiMyDispos = () => request<Dispo[]>("/api/disponibilites/me");
 export const apiSaveMyDispos = (dispos: Dispo[]) =>

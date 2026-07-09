@@ -110,3 +110,19 @@ public class ConflitDto
     public string Description { get; set; } = "";
     public DateTime Date { get; set; }
 }
+
+public class SlotUpdateDto
+{
+    public Guid SalleId { get; set; }
+    public Guid EnseignantId { get; set; }
+    public Jour Jour { get; set; }
+    public string HeureDebut { get; set; } = ""; // format "HH:mm", ex "07:30"
+    public string HeureFin { get; set; } = "";   // format "HH:mm", ex "09:00"
+}
+
+public class SlotConflitResponse
+{
+    public string Message { get; set; } = "";
+    public List<ConflitDto> Conflits { get; set; } = new();
+    public List<string> SallesLibres { get; set; } = new();
+}
