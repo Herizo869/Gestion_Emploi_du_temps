@@ -7,7 +7,7 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
     {
-        await db.Database.EnsureCreatedAsync();
+        await db.Database.MigrateAsync();
         if (await db.Users.AnyAsync()) return;
 
         // ══════════════════════════════════════════════════

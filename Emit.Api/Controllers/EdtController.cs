@@ -18,7 +18,7 @@ public class EdtController : ControllerBase
         .Include(s => s.Cours).Include(s => s.Enseignant)
         .Include(s => s.Salle).Include(s => s.Niveau).Include(s => s.Filiere);
 
-    [HttpGet]
+    [HttpGet, AllowAnonymous]
     public async Task<ActionResult<IEnumerable<SlotEDTDto>>> Get(
         [FromQuery] Guid? semestreId, [FromQuery] Guid? niveauId,
         [FromQuery] Guid? filiereId, [FromQuery] Guid? salleId)

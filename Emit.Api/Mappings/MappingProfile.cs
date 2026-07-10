@@ -9,7 +9,18 @@ public class MappingProfile : Profile
     public MappingProfile()
     {
         CreateMap<Enseignant, EnseignantDto>()
-            .ForMember(d => d.NbCours, o => o.MapFrom(s => s.Cours.Count));
+            .ForMember(d => d.NbCours, o => o.MapFrom(s => s.Cours.Count))
+            .ForMember(d => d.HeuresDisponibles,
+                o => o.MapFrom(s =>
+                    s.Disponibilites == null
+                        ? 0
+                        : s.Disponibilites.Where(d => d.EstDisponible).Count() * 1.5))
+            .ForMember(d => d.HeuresPlanifiees,
+                o => o.MapFrom(s =>
+                    s.Slots == null || s.Slots.Count == 0
+                        ? 0
+                        : s.Slots.Sum(slot =>
+                            (slot.HeureFin.ToTimeSpan() - slot.HeureDebut.ToTimeSpan()).TotalHours)));
         CreateMap<EnseignantDto, Enseignant>()
             .ForMember(e => e.Cours, o => o.Ignore())
             .ForMember(e => e.Slots, o => o.Ignore());

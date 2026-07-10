@@ -20,6 +20,8 @@ export interface Enseignant {
   specialite: string;
   statut: "permanent" | "vacataire" | "invite";
   nbCours: number;
+  heuresDisponibles?: number;
+  heuresPlanifiees?: number;
 }
 
 export interface Salle {

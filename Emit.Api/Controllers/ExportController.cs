@@ -92,7 +92,7 @@ public class ExportController : ControllerBase
 
                     table.Header(header =>
                     {
-                        foreach (var h in new[] { "Jour", "Horaire", "Cours", "Type", "Enseignant", "Salle" })
+                        foreach (var h in new string[] { "Jour", "Horaire", "Cours", "Type", "Enseignant", "Salle" })
                             header.Cell().Background(Colors.Grey.Lighten2).Padding(4).Text(h).Bold();
                     });
 
