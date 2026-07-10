@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,7 +10,11 @@ import {
 import Logo from "@/components/Logo";
 import WeeklyGrid from "@/components/WeeklyGrid";
 import { niveaux, allEdtSlots } from "@/data/mock";
-import type { SlotEDT, CoursType } from "@/types";
+import type { SlotEDT, CoursType, Niveau, Semestre } from "@/types";
+import { apiNiveaux, apiSemestres, apiEdt, apiDownloadPdf } from "@/lib/api";
+
+
+
 
 // ─── Couleurs par type ────────────────────────────────────────────
 const TYPE_CONFIG: Record<CoursType, { label: string; bg: string; dot: string; text: string }> = {
@@ -29,6 +33,36 @@ const NIVEAU_COLORS: Record<string, string> = {
 };
 
 export default function PublicEdt() {
+  const [niveaux, setNiveaux] = useState<Niveau[]>([]);
+  const [allEdtSlots, setAllEdtSlots] = useState<SlotEDT[]>([]);
+  const [semestre, setSemestre] = useState<Semestre | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [niveauxData, semestresData] = await Promise.all([
+          apiNiveaux(),
+          apiSemestres(),
+        ]);
+        setNiveaux(niveauxData);
+        if (niveauxData.length > 0) {
+          setActiveNiveau(niveauxData[0].libelle);
+          if (niveauxData[0].filieres.length > 0) {
+            setActiveFiliere(niveauxData[0].filieres[0].libelle);
+          }
+        }
+        const publie = semestresData.find(s => s.statut === "publie") ?? null;
+        setSemestre(publie);
+        if (publie) {
+          const slots = await apiEdt({ semestreId: publie.id });
+          setAllEdtSlots(slots);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
   // ─── State ────────────────────────────────────────────────────
   const [activeNiveau, setActiveNiveau] = useState("L3");
   const [activeFiliere, setActiveFiliere] = useState("INFO");
@@ -112,7 +146,12 @@ export default function PublicEdt() {
                 Accès public
               </span>
               <button
-                onClick={() => apiDownloadPdf({ semestreId: semestre.id, niveauId: currentNiveau?.id, filiereId: currentNiveau?.filieres.find(f => f.libelle === activeFiliere)?.id, orientation: "portrait" })}
+                onClick={() => semestre && apiDownloadPdf({
+                  semestreId: semestre.id,
+                  niveauId: currentNiveau?.id,
+                  filiereId: currentNiveau?.filieres.find(f => f.libelle === activeFiliere)?.id,
+                  orientation: "portrait",
+                })}
                 className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
               >
                 <Download className="h-4 w-4" />

@@ -203,7 +203,7 @@ export default function AdminExport() {
         <CardHeader title="Statut de publication" />
         <CardBody className="flex items-center justify-between">
           <div className="space-y-1">
-            <Badge tone={semestreActuel?.statut === "publie" ? "green" : "slate"}>
+            <Badge tone={semestreActuel?.statut === "publie" ? "green" : "gray"}>
               {semestreActuel?.statut === "publie" ? "Publié" : "Brouillon"}
             </Badge>
             {semestreActuel?.datePublication && (

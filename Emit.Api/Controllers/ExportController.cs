@@ -39,7 +39,7 @@ public class ExportController : ControllerBase
         sb.AppendLine("Jour;Debut;Fin;Cours;Type;Enseignant;Salle;Niveau;Filiere");
         foreach (var s in slots)
         {
-            sb.AppendLine(string.Join(";", new[]
+            sb.AppendLine(string.Join(";", new string[]
             {
                 s.Jour.ToString(),
                 s.HeureDebut.ToString("HH:mm"),
@@ -48,7 +48,7 @@ public class ExportController : ControllerBase
                 s.Cours.Type.ToString(),
                 $"{s.Enseignant.Prenom} {s.Enseignant.Nom}",
                 s.Salle.Numero,
-                s.Niveau.Libelle,
+                s.Niveau.Libelle.ToString(),
                 s.Filiere.Libelle,
             }));
         }
