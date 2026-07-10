@@ -1,4 +1,5 @@
 using System.Text;
+
 using Emit.Api.Data;
 using Emit.Api.Mappings;
 using Emit.Api.Services;
@@ -7,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
 

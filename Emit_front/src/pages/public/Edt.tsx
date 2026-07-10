@@ -112,7 +112,8 @@ export default function PublicEdt() {
                 Accès public
               </span>
               <button
-                className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:border-emit-sky/60 hover:bg-white/15"
+                onClick={() => apiDownloadPdf({ semestreId: semestre.id, niveauId: currentNiveau?.id, filiereId: currentNiveau?.filieres.find(f => f.libelle === activeFiliere)?.id, orientation: "portrait" })}
+                className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
               >
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Télécharger PDF</span>

@@ -3,6 +3,7 @@ import type {
   SlotEDT, Notif, LogEntry, User,
 } from "@/types";
 
+
 const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "https://localhost:5001").replace(/\/$/, "");
 const TOKEN_KEY = "emit-token";
 
@@ -152,3 +153,52 @@ export const apiDisposEnseignant = (enseignantId: string) =>
   request<Dispo[]>(`/api/disponibilites/${enseignantId}`);
 export const apiSaveDisponibilites = (enseignantId: string, disponibilites: Dispo[]) =>
   request<void>(`/api/disponibilites/${enseignantId}`, { method: "PUT", body: JSON.stringify(disponibilites) });
+
+export const apiDepublierSemestre = (id: string) =>
+  request<Semestre>(`/api/semestres/${id}/depublier`, { method: "POST" });
+
+// ───── Export ──────────────────────────────────────────────
+export interface ExportParams {
+  semestreId?: string;
+  niveauId?: string;
+  filiereId?: string;
+  salleId?: string;
+  orientation?: "portrait" | "paysage";
+}
+
+function buildExportQuery(params: ExportParams) {
+  const q = new URLSearchParams();
+  if (params.semestreId) q.set("semestreId", params.semestreId);
+  if (params.niveauId) q.set("niveauId", params.niveauId);
+  if (params.filiereId) q.set("filiereId", params.filiereId);
+  if (params.salleId) q.set("salleId", params.salleId);
+  if (params.orientation) q.set("orientation", params.orientation);
+  return q.toString();
+}
+
+// Télécharge un fichier binaire (PDF/CSV) et déclenche le download navigateur.
+// Utilise fetch + Blob car ces endpoints ne renvoient pas du JSON.
+async function downloadFile(path: string, filename: string) {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const res = await fetch(`${BASE}${path}`, { headers });
+  if (!res.ok) throw new Error(`Échec du téléchargement (${res.status})`);
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export const apiDownloadPdf = (params: ExportParams = {}) =>
+  downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf");
+
+export const apiDownloadCsv = (params: ExportParams = {}) =>
+  downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv");

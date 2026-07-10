@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRef } from "react";
+import { apiNiveaux, apiSemestres, apiEdt, apiDownloadPdf } from "@/lib/api";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,7 +11,6 @@ import {
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import WeeklyGrid from "@/components/WeeklyGrid";
-import { apiNiveaux, apiSemestres, apiEdt } from "@/lib/api";
 import type { SlotEDT, CoursType, Niveau, Semestre } from "@/types";
 
 // ─── Couleurs par type ────────────────────────────────────────────

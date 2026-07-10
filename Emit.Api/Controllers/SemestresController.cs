@@ -41,6 +41,19 @@ public class SemestresController : ControllerBase
         return Ok(_map.Map<SemestreDto>(s));
     }
 
+    // POST /api/semestres/{id}/depublier — Admin
+    [HttpPost("{id:guid}/depublier"), Authorize(Roles = "Admin")]
+    public async Task<ActionResult<SemestreDto>> Depublier(Guid id)
+    {
+        var s = await _db.Semestres.FindAsync(id);
+        if (s is null) return NotFound();
+
+        s.Statut = StatutSemestre.Brouillon;
+        _db.Journal.Add(new LogEntry { Action = LogAction.Modification, Entite = $"Semestre {s.Libelle} {s.Annee} dépublié" });
+        await _db.SaveChangesAsync();
+        return Ok(_map.Map<SemestreDto>(s));
+    }
+
     // POST /api/semestres/{id}/archiver — Admin
     [HttpPost("{id:guid}/archiver"), Authorize(Roles = "Admin")]
     public async Task<ActionResult<SemestreDto>> Archiver(Guid id)
