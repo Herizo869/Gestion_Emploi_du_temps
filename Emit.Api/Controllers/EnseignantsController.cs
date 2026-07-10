@@ -17,12 +17,20 @@ public class EnseignantsController : ControllerBase
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EnseignantDto>>> GetAll()
-        => Ok(_map.Map<List<EnseignantDto>>(await _db.Enseignants.Include(e => e.Cours).ToListAsync()));
+        => Ok(_map.Map<List<EnseignantDto>>(await _db.Enseignants
+            .Include(e => e.Cours)
+            .Include(e => e.Disponibilites)
+            .Include(e => e.Slots)
+            .ToListAsync()));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<EnseignantDto>> Get(Guid id)
     {
-        var e = await _db.Enseignants.Include(x => x.Cours).FirstOrDefaultAsync(x => x.Id == id);
+        var e = await _db.Enseignants
+            .Include(x => x.Cours)
+            .Include(x => x.Disponibilites)
+            .Include(x => x.Slots)
+            .FirstOrDefaultAsync(x => x.Id == id);
         return e is null ? NotFound() : _map.Map<EnseignantDto>(e);
     }
 

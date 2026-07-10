@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Edit2, Trash2, AlertTriangle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Edit2, Trash2, AlertTriangle, Search, Users, Building2, DoorOpen, TrendingUp, Layers } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -9,22 +9,27 @@ import { useData } from "@/context/DataContext";
 import { apiCreateSalle, apiUpdateSalle, apiDeleteSalle } from "@/lib/api";
 import type { Salle } from "@/types";
 
-const typeTone = { 
-  Cours: "blue", 
-  TP: "green", 
-  Amphi: "purple", 
-  Examen: "orange", 
-  Reunion: "gray" 
+const TYPE_CONFIG = {
+  Cours: { tone: "blue" as const, icon: "📚" },
+  TP: { tone: "green" as const, icon: "💻" },
+  Amphi: { tone: "purple" as const, icon: "🎓" },
+  Examen: { tone: "orange" as const, icon: "📝" },
+  Reunion: { tone: "gray" as const, icon: "🤝" },
 } as const;
 
-const emptyForm: Omit<Salle, "id"> = { 
-  numero: "", 
-  batiment: "", 
-  capacite: 40, 
-  type: "Cours", 
-  disponible: true, 
-  occupation: 0 
+type SortKey = "numero" | "capacite-asc" | "capacite-desc" | "occupation" | "disponible";
+
+const emptyForm: Omit<Salle, "id"> = {
+  numero: "", batiment: "", capacite: 40,
+  type: "Cours", disponible: true, occupation: 0,
 };
+
+function occupationColor(pct: number): string {
+  if (pct > 90) return "bg-red-500";
+  if (pct > 70) return "bg-orange-500";
+  if (pct > 40) return "bg-yellow-500";
+  return "bg-emit-blue";
+}
 
 export default function AdminSalles() {
   const { salles: items, refresh } = useData();
@@ -35,6 +40,45 @@ export default function AdminSalles() {
   const [form, setForm] = useState<Omit<Salle, "id">>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterBatiment, setFilterBatiment] = useState("");
+  const [sortBy, setSortBy] = useState<SortKey>("numero");
+
+  // Statistiques
+  const stats = useMemo(() => {
+    const total = items.length;
+    const disponibles = items.filter(s => s.disponible).length;
+    const capMoyenne = total > 0 ? Math.round(items.reduce((a, s) => a + s.capacite, 0) / total) : 0;
+    const occMoyenne = total > 0 ? Math.round(items.reduce((a, s) => a + s.occupation, 0) / total) : 0;
+    return { total, disponibles, capMoyenne, occMoyenne };
+  }, [items]);
+
+  // Bâtiments uniques pour le filtre
+  const batiments = useMemo(
+    () => [...new Set(items.map(s => s.batiment).filter(Boolean))].sort(),
+    [items]
+  );
+
+  // Filtrage + tri
+  const filtered = useMemo(() => {
+    let result = items.filter(s =>
+      (!search || s.numero.toLowerCase().includes(search.toLowerCase()) || s.batiment.toLowerCase().includes(search.toLowerCase())) &&
+      (!filterType || s.type === filterType) &&
+      (!filterBatiment || s.batiment === filterBatiment)
+    );
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case "numero": return a.numero.localeCompare(b.numero);
+        case "capacite-asc": return a.capacite - b.capacite;
+        case "capacite-desc": return b.capacite - a.capacite;
+        case "occupation": return b.occupation - a.occupation;
+        case "disponible": return a.disponible === b.disponible ? 0 : a.disponible ? -1 : 1;
+        default: return 0;
+      }
+    });
+    return result;
+  }, [items, search, filterType, filterBatiment, sortBy]);
 
   const openAdd = () => {
     setEditTarget(null);
@@ -120,77 +164,175 @@ export default function AdminSalles() {
         </Button>
       </div>
 
+      {/* Statistiques */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-blue-50 p-2.5">
+              <Building2 className="h-5 w-5 text-emit-blue" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
+              <p className="text-xs text-slate-500">Total salles</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-green-50 p-2.5">
+              <DoorOpen className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{stats.disponibles}</p>
+              <p className="text-xs text-slate-500">Salles disponibles</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-purple-50 p-2.5">
+              <Users className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{stats.capMoyenne}</p>
+              <p className="text-xs text-slate-500">Capacité moyenne</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-orange-50 p-2.5">
+              <TrendingUp className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{stats.occMoyenne}%</p>
+              <p className="text-xs text-slate-500">Occupation moyenne</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardBody>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
-                  <th className="py-2.5 pr-3">Numéro</th>
-                  <th className="py-2.5 pr-3">Bâtiment</th>
-                  <th className="py-2.5 pr-3">Capacité</th>
-                  <th className="py-2.5 pr-3">Type</th>
-                  <th className="py-2.5 pr-3">Disponible</th>
-                  <th className="py-2.5 pr-3">Occupation</th>
-                  <th className="py-2.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400">Aucune salle configurée</td>
-                  </tr>
-                )}
-                {items.map((s) => (
-                  <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-3 pr-3 font-medium">{s.numero}</td>
-                    <td className="py-3 pr-3 text-slate-600">{s.batiment}</td>
-                    <td className="py-3 pr-3 tabular-nums">{s.capacite}</td>
-                    <td className="py-3 pr-3">
-                      <Badge tone={typeTone[s.type]}>{s.type}</Badge>
-                    </td>
-                    <td className="py-3 pr-3">
-                      <button 
-                        onClick={() => toggleDispo(s)}
-                        className="inline-flex items-center focus:outline-none"
-                      >
-                        <span className={`relative inline-block h-5 w-9 rounded-full transition ${s.disponible ? "bg-green-500" : "bg-slate-300"}`}>
-                          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${s.disponible ? "left-4" : "left-0.5"}`} />
-                        </span>
-                      </button>
-                    </td>
-                    <td className="py-3 pr-3 min-w-[160px]">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                          <div 
-                            className={`h-full ${s.occupation > 90 ? "bg-red-500" : "bg-emit-blue"}`} 
-                            style={{ width: `${s.occupation}%` }} 
-                          />
+          {/* Filtres et tri */}
+          <div className="mb-4 grid gap-3 sm:grid-cols-4">
+            <div className="relative sm:col-span-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-emit-blue focus:outline-none focus:ring-1 focus:ring-emit-blue"
+              />
+            </div>
+            <select
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              value={filterType} onChange={e => setFilterType(e.target.value)}
+            >
+              <option value="">Tous types</option>
+              {Object.keys(TYPE_CONFIG).map(t => <option key={t}>{t}</option>)}
+            </select>
+            <select
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              value={filterBatiment} onChange={e => setFilterBatiment(e.target.value)}
+            >
+              <option value="">Tous bâtiments</option>
+              {batiments.map(b => <option key={b} value={b}>Bâtiment {b}</option>)}
+            </select>
+            <div className="relative">
+              <Layers className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <select
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm"
+                value={sortBy} onChange={e => setSortBy(e.target.value as SortKey)}
+              >
+                <option value="numero">Tri : Numéro</option>
+                <option value="capacite-asc">Capacité ↑</option>
+                <option value="capacite-desc">Capacité ↓</option>
+                <option value="occupation">Occupation</option>
+                <option value="disponible">Disponibilité</option>
+              </select>
+            </div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <AlertTriangle className="h-12 w-12 text-slate-300 mb-3" />
+              <p className="text-center text-slate-400">Aucune salle ne correspond à vos critères</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((s) => {
+                const cfg = TYPE_CONFIG[s.type];
+                return (
+                  <div
+                    key={s.id}
+                    className="group rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm hover:shadow-md transition-all duration-200"
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`grid h-10 w-10 place-items-center rounded-lg text-lg ${s.disponible ? "bg-green-50" : "bg-slate-100"}`}>
+                          {cfg.icon}
                         </div>
-                        <span className="text-xs tabular-nums text-slate-500">{s.occupation}%</span>
+                        <div>
+                          <h3 className="font-semibold text-slate-800 text-lg leading-tight">{s.numero}</h3>
+                          <p className="text-xs text-slate-500">
+                            <Building2 className="inline h-3 w-3 mr-0.5" />
+                            Bâtiment {s.batiment}
+                          </p>
+                        </div>
                       </div>
-                    </td>
-                    <td className="py-3 text-right">
-                      <div className="inline-flex gap-1">
-                        <button 
-                          onClick={() => openEdit(s)}
-                          className="rounded p-1.5 hover:bg-slate-200"
-                        >
-                          <Edit2 className="h-4 w-4 text-slate-500" />
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="rounded p-2 hover:bg-slate-200 transition-colors" title="Modifier" onClick={() => openEdit(s)}>
+                          <Edit2 className="h-4 w-4 text-slate-600" />
                         </button>
-                        <button 
-                          onClick={() => setConfirm(s)}
-                          className="rounded p-1.5 hover:bg-red-100"
-                        >
+                        <button className="rounded p-2 hover:bg-red-100 transition-colors" title="Supprimer" onClick={() => setConfirm(s)}>
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+
+                    {/* Type et capacité */}
+                    <div className="flex items-center justify-between mb-3">
+                      <Badge tone={cfg.tone}>{cfg.icon} {s.type}</Badge>
+                      <span className="text-sm text-slate-600">
+                        <Users className="inline h-3.5 w-3.5 mr-1" />
+                        {s.capacite} places
+                      </span>
+                    </div>
+
+                    {/* Disponibilité */}
+                    <div className="flex items-center justify-between py-2.5 px-3 bg-slate-50 rounded-lg mb-3">
+                      <span className="text-sm font-medium text-slate-700">Disponible</span>
+                      <button onClick={() => toggleDispo(s)} className="focus:outline-none">
+                        <span className={`relative inline-block h-6 w-11 rounded-full transition-all duration-200 ${s.disponible ? "bg-green-500 shadow-sm shadow-green-200" : "bg-slate-300"}`}>
+                          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200 ${s.disponible ? "left-5" : "left-0.5"}`} />
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* Occupation */}
+                    <div className="pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between text-sm mb-1.5">
+                        <span className="text-slate-600">Occupation</span>
+                        <span className={`font-semibold tabular-nums ${s.occupation > 90 ? "text-red-600" : s.occupation > 70 ? "text-orange-600" : "text-slate-700"}`}>
+                          {s.occupation}%
+                        </span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className={`h-full transition-all duration-500 rounded-full ${occupationColor(s.occupation)}`}
+                          style={{ width: `${s.occupation}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="mt-3 text-xs text-slate-500">{filtered.length} résultat(s)</div>
         </CardBody>
       </Card>
 
@@ -271,11 +413,18 @@ export default function AdminSalles() {
         }
       >
         <div className="flex items-start gap-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" />
-          <p className="text-sm text-slate-700">
-            Supprimer la salle <strong>{confirm?.numero}</strong> ?<br />
-            Cette action est irréversible.
-          </p>
+          <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500 shrink-0" />
+          <div>
+            <p className="text-sm text-slate-700">
+              Supprimer la salle <strong>{confirm?.numero}</strong> ?
+            </p>
+            {confirm && confirm.occupation > 0 && (
+              <p className="mt-1 text-xs text-orange-600">
+                ⚠️ Cette salle a {confirm.occupation}% d'occupation — la suppression peut affecter l'EDT.
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-400">Cette action est irréversible.</p>
+          </div>
         </div>
       </Modal>
     </div>

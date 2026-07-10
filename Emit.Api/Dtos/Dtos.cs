@@ -12,6 +12,10 @@ public class EnseignantDto
     public string Specialite { get; set; } = "";
     public StatutEnseignant Statut { get; set; }
     public int NbCours { get; set; }
+    /// <summary>Total des heures disponibles cette semaine (depuis les disponibilités)</summary>
+    public double HeuresDisponibles { get; set; }
+    /// <summary>Total des heures planifiées dans l'EDT</summary>
+    public double HeuresPlanifiees { get; set; }
 }
 
 public class SalleDto

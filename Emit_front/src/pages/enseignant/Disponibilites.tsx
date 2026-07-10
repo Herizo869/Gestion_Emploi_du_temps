@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, AlertTriangle, Loader2 } from "lucide-react";
+import { Save, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { apiMyDispos, apiSaveMyDispos } from "@/lib/api";
@@ -7,43 +7,47 @@ import { apiMyDispos, apiSaveMyDispos } from "@/lib/api";
 const CRENEAUX = [
   "07h30 - 09h00", "09h15 - 10h45", "11h00 - 12h30",
   "13h30 - 15h00", "15h15 - 16h45", "17h00 - 18h30",
-];
+] as const;
 const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"] as const;
+const NB_CRENEAUX = CRENEAUX.length;
+const NB_JOURS = JOURS.length;
 
 type State = "dispo" | "indispo" | "vide";
 
 export default function EnsDisponibilites() {
   const [grid, setGrid] = useState<State[][]>(
-    () => CRENEAUX.map(() => JOURS.map(() => "vide"))
+    () => Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State))
   );
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [changed, setChanged] = useState(false);
 
-  // Charger les dispos existantes au montage
   useEffect(() => {
     apiMyDispos()
       .then(dispos => {
-        const newGrid = CRENEAUX.map(() => JOURS.map(() => "vide" as State));
+        const newGrid = Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State));
         dispos.forEach(d => {
-          const row = CRENEAUX.indexOf(d.creneau);
-          const col = JOURS.indexOf(d.jour as any);
+          const row = CRENEAUX.indexOf(d.creneau as typeof CRENEAUX[number]);
+          const col = JOURS.indexOf(d.jour as typeof JOURS[number]);
           if (row >= 0 && col >= 0) {
             newGrid[row][col] = d.estDisponible ? "dispo" : "indispo";
           }
         });
         setGrid(newGrid);
       })
-      .catch(() => {}); // pas d'endpoint encore — grille vide par défaut
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const toggle = (r: number, c: number) => {
     setGrid(g => {
       const copy = g.map(row => [...row]);
-      const v = copy[r][c];
-      copy[r][c] = v === "vide" ? "dispo" : v === "dispo" ? "indispo" : "vide";
+      copy[r][c] = copy[r][c] === "vide" ? "dispo" : copy[r][c] === "dispo" ? "indispo" : "vide";
       return copy;
     });
+    setChanged(true);
     setSaved(false);
   };
 
@@ -51,26 +55,25 @@ export default function EnsDisponibilites() {
     setSaving(true);
     setError(null);
     try {
-      const disponibilites = CRENEAUX.flatMap((creneau, r) =>
-        JOURS.map((jour, c) => ({
-          jour,
-          creneau,
-          estDisponible: grid[r][c] === "dispo",
-          estIndisponible: grid[r][c] === "indispo",
-        }))
-      ).filter(d => d.estDisponible || d.estIndisponible);
-
+      const disponibilites = [];
+      for (let r = 0; r < NB_CRENEAUX; r++) {
+        for (let c = 0; c < NB_JOURS; c++) {
+          const state = grid[r][c];
+          if (state !== "vide") {
+            disponibilites.push({ jour: JOURS[c], creneau: CRENEAUX[r], estDisponible: state === "dispo", estIndisponible: state === "indispo" });
+          }
+        }
+      }
       await apiSaveMyDispos(disponibilites as any);
       setSaved(true);
+      setChanged(false);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
       setError(e.message ?? "Erreur lors de la sauvegarde");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const total = grid.flat().filter(v => v === "dispo").length * 1.5;
+  const totalHours = grid.flat().filter(v => v === "dispo").length * 1.5;
 
   return (
     <div className="space-y-5">
@@ -79,69 +82,104 @@ export default function EnsDisponibilites() {
         <Button
           leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || loading}
         >
           {saving ? "Sauvegarde..." : "Sauvegarder"}
         </Button>
       </div>
 
       {saved && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700">
-          ✓ Disponibilités enregistrées avec succès
+        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0" /> ✓ Disponibilités enregistrées avec succès
         </div>
       )}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-          {error}
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          <XCircle className="h-4 w-4 shrink-0" /> {error}
         </div>
       )}
 
       <Card>
         <CardBody className="space-y-4">
           <div className="flex flex-wrap items-center gap-4 text-xs">
-            <span className="font-medium text-slate-700">Cliquez pour basculer :</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-green-500" />Disponible</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-red-500" />Indisponible</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-slate-200" />Non renseigné</span>
+            <span className="font-medium text-slate-700">Légende :</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-green-500 shadow-sm" />Disponible</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-red-500 shadow-sm" />Indisponible</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-slate-200 border border-slate-300" />Non renseigné</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-slate-500">Cliquez sur une case pour basculer</span>
+            {changed && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 animate-pulse ml-2">
+                <AlertTriangle className="h-3 w-3" /> Non sauvegardé
+              </span>
+            )}
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
-              <thead>
-                <tr>
-                  <th className="bg-slate-50 px-2 py-2 text-left text-xs text-slate-500">Créneau</th>
-                  {JOURS.map(j => (
-                    <th key={j} className="border-l border-slate-200 bg-slate-50 px-2 py-2 text-left text-xs text-slate-700">{j}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {CRENEAUX.map((c, r) => (
-                  <tr key={c} className="border-b border-slate-100">
-                    <td className="bg-slate-50/60 px-2 py-1 text-xs font-mono text-slate-600">{c}</td>
-                    {JOURS.map((j, ci) => {
-                      const v = grid[r][ci];
-                      const bg = v === "dispo" ? "bg-green-500" : v === "indispo" ? "bg-red-500" : "bg-slate-200";
-                      return (
-                        <td key={j} className="border-l border-slate-100 p-1">
-                          <button onClick={() => toggle(r, ci)} className={`h-8 w-full rounded ${bg} hover:opacity-80 transition`} />
-                        </td>
-                      );
-                    })}
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-emit-sky" />
+                <p className="text-sm text-slate-500">Chargement de vos disponibilités...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+              <table className="w-full min-w-[640px] border-collapse text-sm">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 bg-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-600 border-r border-slate-200">
+                      <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> Créneaux</div>
+                    </th>
+                    {JOURS.map((jour, idx) => (
+                      <th key={jour} className={`px-3 py-3 text-center text-xs font-semibold border-b-2 ${idx === new Date().getDay() - 1 ? "bg-emit-light/60 text-emit-navy border-b-emit-sky" : "bg-slate-50 text-slate-600 border-b-slate-200"}`}>
+                        {jour}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {CRENEAUX.map((c, r) => (
+                    <tr key={c} className="group">
+                      <td className="sticky left-0 z-10 bg-slate-50/90 px-3 py-2.5 text-xs font-mono text-slate-600 border-r border-slate-200 font-medium">{c}</td>
+                      {JOURS.map((j, ci) => {
+                        const v = grid[r][ci];
+                        const isDispo = v === "dispo";
+                        const isIndispo = v === "indispo";
+                        return (
+                          <td key={j} className="border border-slate-100 p-1">
+                            <button onClick={() => toggle(r, ci)}
+                              className={`relative h-10 w-full rounded-lg border-2 transition-all duration-150 ${
+                                isDispo ? "bg-green-100 border-green-400 hover:bg-green-200 hover:border-green-500"
+                                : isIndispo ? "bg-red-100 border-red-400 hover:bg-red-200 hover:border-red-500"
+                                : "bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
+                              }`}
+                              title={`${j} ${c}: ${isDispo ? "Disponible" : isIndispo ? "Indisponible" : "Non renseigné"}`}>
+                              {isDispo && <span className="absolute inset-0 flex items-center justify-center"><CheckCircle2 className="h-4 w-4 text-green-600" /></span>}
+                              {isIndispo && <span className="absolute inset-0 flex items-center justify-center"><XCircle className="h-4 w-4 text-red-600" /></span>}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700">
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="h-4 w-4 shrink-0" />
             Une indisponibilité créant un conflit avec un cours planifié sera signalée à l'admin.
           </div>
 
-          <p className="text-sm text-slate-600">
-            Total cette semaine : <strong>{total}h</strong>
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-600">
+              Total cette semaine : <strong className="text-emit-navy text-lg">{totalHours}h</strong>
+            </p>
+            {changed && (
+              <span className="text-xs text-amber-600 font-medium">Modifications non enregistrées</span>
+            )}
+          </div>
         </CardBody>
       </Card>
     </div>

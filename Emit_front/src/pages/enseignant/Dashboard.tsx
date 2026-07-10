@@ -70,7 +70,7 @@ export default function EnsDashboard() {
                 <li key={c.id} className="flex items-center justify-between py-2.5">
                   <div>
                     <p className="text-sm font-medium">{c.intitule}</p>
-                    <p className="text-xs text-slate-500">{c.niveau} · {c.filiere}</p>
+                    <p className="text-xs text-slate-500">{c.niveauLibelle} · {c.filiereLibelle}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge tone={typeTone[c.type]}>{c.type}</Badge>

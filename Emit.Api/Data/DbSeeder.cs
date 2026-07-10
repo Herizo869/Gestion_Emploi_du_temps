@@ -8,6 +8,17 @@ public static class DbSeeder
     public static async Task SeedAsync(AppDbContext db)
     {
         await db.Database.EnsureCreatedAsync();
+
+        // Vérifie si la table Disponibilites existe (ajoutée après la création initiale)
+        bool dispoTableMissing = false;
+        try { await db.Disponibilites.AnyAsync(); }
+        catch { dispoTableMissing = true; }
+
+        if (dispoTableMissing)
+        {
+            await db.Database.EnsureDeletedAsync();
+            await db.Database.EnsureCreatedAsync();
+        }
         if (await db.Users.AnyAsync()) return;
 
         // ══════════════════════════════════════════════════
