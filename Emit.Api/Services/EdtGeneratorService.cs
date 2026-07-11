@@ -47,33 +47,66 @@ public class EdtGeneratorService : IEdtGeneratorService
             && TimeOnly.TryParse(parts[1].Replace('h', ':'), out fin);
     }
 
-    // Charge les indisponibilités déclarées pour le semestre, groupées par enseignant.
-    private async Task<Dictionary<Guid, List<(Jour jour, TimeOnly debut, TimeOnly fin)>>> ChargerIndisponibilitesAsync(Guid semestreId)
+    // Charge les disponibilités et indisponibilités déclarées pour le semestre,
+    // groupées par (Enseignant, Cours) — chaque cours a désormais sa propre grille.
+    private async Task<(Dictionary<(Guid ens, Guid cours), List<(Jour jour, TimeOnly debut, TimeOnly fin)>> dispos,
+                         Dictionary<(Guid ens, Guid cours), List<(Jour jour, TimeOnly debut, TimeOnly fin)>> indispos)>
+        ChargerDisponibilitesAsync(Guid semestreId)
     {
-        var indispos = await _db.Disponibilites
-            .Where(d => d.SemestreId == semestreId && d.EstIndisponible)
+        var dbDispos = await _db.Disponibilites
+            .Where(d => d.SemestreId == semestreId)
             .ToListAsync();
 
-        var parEnseignant = new Dictionary<Guid, List<(Jour, TimeOnly, TimeOnly)>>();
-        foreach (var d in indispos)
+        var parCoursDispos = new Dictionary<(Guid, Guid), List<(Jour, TimeOnly, TimeOnly)>>();
+        var parCoursIndispos = new Dictionary<(Guid, Guid), List<(Jour, TimeOnly, TimeOnly)>>();
+
+        foreach (var d in dbDispos)
         {
             if (!Enum.TryParse<Jour>(d.Jour, out var jourEnum)) continue;
             if (!TryParseCreneau(d.Creneau, out var debut, out var fin)) continue;
 
-            if (!parEnseignant.TryGetValue(d.EnseignantId, out var liste))
-                parEnseignant[d.EnseignantId] = liste = new();
-            liste.Add((jourEnum, debut, fin));
+            var cle = (d.EnseignantId, d.CoursId);
+            if (d.EstDisponible)
+            {
+                if (!parCoursDispos.TryGetValue(cle, out var liste))
+                    parCoursDispos[cle] = liste = new();
+                liste.Add((jourEnum, debut, fin));
+            }
+            else if (d.EstIndisponible)
+            {
+                if (!parCoursIndispos.TryGetValue(cle, out var liste))
+                    parCoursIndispos[cle] = liste = new();
+                liste.Add((jourEnum, debut, fin));
+            }
         }
-        return parEnseignant;
+        return (parCoursDispos, parCoursIndispos);
     }
 
-    // Vrai si [debut,fin) chevauche une plage déclarée indisponible pour cet enseignant ce jour-là.
-    private static bool EstIndisponible(
-        Dictionary<Guid, List<(Jour jour, TimeOnly debut, TimeOnly fin)>> indispos,
-        Guid enseignantId, Jour jour, TimeOnly debut, TimeOnly fin)
+    // Vérifie si l'enseignant est disponible pour CE cours précis sur un créneau donné
+    private static bool EstEnseignantDisponible(
+        Dictionary<(Guid ens, Guid cours), List<(Jour jour, TimeOnly debut, TimeOnly fin)>> dispos,
+        Dictionary<(Guid ens, Guid cours), List<(Jour jour, TimeOnly debut, TimeOnly fin)>> indispos,
+        Guid enseignantId, Guid coursId, Jour jour, TimeOnly debut, TimeOnly fin)
     {
-        if (!indispos.TryGetValue(enseignantId, out var liste)) return false;
-        return liste.Any(p => p.jour == jour && debut < p.fin && p.debut < fin);
+        var cle = (enseignantId, coursId);
+
+        // 1. Si l'enseignant est déclaré indisponible (rouge) sur ce créneau POUR CE COURS, il n'est pas disponible.
+        if (indispos.TryGetValue(cle, out var listeIndispos))
+        {
+            if (listeIndispos.Any(p => p.jour == jour && debut < p.fin && p.debut < fin))
+                return false;
+        }
+
+        // 2. Si l'enseignant a défini au moins une disponibilité (vert) pour CE cours sur ce semestre :
+        // il doit avoir au moins une disponibilité (vert) qui chevauche ce créneau.
+        if (dispos.TryGetValue(cle, out var listeDispos) && listeDispos.Count > 0)
+        {
+            return listeDispos.Any(p => p.jour == jour && debut >= p.debut && fin <= p.fin);
+        }
+
+        // 3. S'il n'a défini aucune disponibilité (vert) pour ce cours (grille non renseignée),
+        // il est disponible par défaut (sauf si exclu par les indisponibilités).
+        return true;
     }
 
     public async Task<EdtGenerationResult> GenerateAsync(Guid semestreId)
@@ -82,11 +115,17 @@ public class EdtGeneratorService : IEdtGeneratorService
             ?? throw new InvalidOperationException("Semestre introuvable");
 
         // Reset: on supprime les slots existants du semestre
-        var existing = _db.Slots.Where(s => s.SemestreId == semestreId);
+        var existing = await _db.Slots.Where(s => s.SemestreId == semestreId).ToListAsync();
         _db.Slots.RemoveRange(existing);
         await _db.SaveChangesAsync();
 
         var result = new EdtGenerationResult();
+
+        // Recalculer les HeuresPlanifiees de chaque cours basées sur les slots restants (dans d'autres semestres)
+        var remainingSlots = await _db.Slots
+            .GroupBy(s => s.CoursId)
+            .Select(g => new { CoursId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.CoursId, x => x.Count);
 
         var cours = await _db.Cours
             .Include(c => c.Niveau)
@@ -94,8 +133,15 @@ public class EdtGeneratorService : IEdtGeneratorService
             .Include(c => c.Enseignants).ThenInclude(ce => ce.Enseignant)
             .ToListAsync();
 
+        foreach (var c in cours)
+        {
+            remainingSlots.TryGetValue(c.Id, out var slotCount);
+            c.HeuresPlanifiees = (int)(slotCount * 1.5);
+        }
+        await _db.SaveChangesAsync();
+
         var salles = await _db.Salles.Where(s => s.Disponible).ToListAsync();
-        var indisponibilites = await ChargerIndisponibilitesAsync(semestreId);
+        var (disponibilites, indisponibilites) = await ChargerDisponibilitesAsync(semestreId);
 
         // Index des occupations en mémoire (rapide)
         var busyEnseignant = new HashSet<(Guid, Jour, TimeOnly)>();
@@ -131,7 +177,7 @@ public class EdtGeneratorService : IEdtGeneratorService
 
                     if (busyEnseignant.Contains((enseignant.Id, jour, debut))) continue;
                     if (busyGroupe.Contains((c.NiveauId, c.FiliereId, jour, debut))) continue;
-                    if (EstIndisponible(indisponibilites, enseignant.Id, jour, debut, fin)) continue;
+                    if (!EstEnseignantDisponible(disponibilites, indisponibilites, enseignant.Id, c.Id, jour, debut, fin)) continue;
 
                     var salle = sallesCompat.FirstOrDefault(s => !busySalle.Contains((s.Id, jour, debut)));
                     if (salle == null) continue;
@@ -153,7 +199,7 @@ public class EdtGeneratorService : IEdtGeneratorService
                 if (placees >= seancesNecessaires) break;
             }
 
-            c.HeuresPlanifiees = c.VolumeHoraire - (int)((seancesNecessaires - placees) * 1.5);
+            c.HeuresPlanifiees += (int)(placees * 1.5);
             if (placees < seancesNecessaires)
                 result.CoursNonPlanifies.Add($"{c.Intitule} ({placees}/{seancesNecessaires} séances)");
         }
@@ -209,17 +255,17 @@ public class EdtGeneratorService : IEdtGeneratorService
             });
         }
 
-        // Nouveau : enseignant planifié sur un créneau qu'il a déclaré indisponible
-        var indisponibilites = await ChargerIndisponibilitesAsync(semestreId);
+        // Enseignant planifié sur un créneau qu'il a déclaré indisponible ou non disponible pour ce cours
+        var (disponibilites, indisponibilites) = await ChargerDisponibilitesAsync(semestreId);
         foreach (var s in slots)
         {
-            if (EstIndisponible(indisponibilites, s.EnseignantId, s.Jour, s.HeureDebut, s.HeureFin))
+            if (!EstEnseignantDisponible(disponibilites, indisponibilites, s.EnseignantId, s.CoursId, s.Jour, s.HeureDebut, s.HeureFin))
             {
                 conflits.Add(new ConflitDto
                 {
                     Id = $"I-{s.Id}",
                     Type = "Indisponibilite",
-                    Description = $"{s.Enseignant.Prenom[0]}. {s.Enseignant.Nom} planifié {s.Jour} {s.HeureDebut:HH\\:mm} alors que déclaré indisponible",
+                    Description = $"{s.Enseignant.Prenom[0]}. {s.Enseignant.Nom} planifié {s.Jour} {s.HeureDebut:HH\\:mm} alors que non disponible pour ce cours",
                     Date = DateTime.UtcNow
                 });
             }
