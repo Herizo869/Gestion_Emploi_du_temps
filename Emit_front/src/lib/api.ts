@@ -98,19 +98,28 @@ export const apiDepublierSemestre = (id: string) =>
 
 // ───── EDT ─────────────────────────────────────────────────
 export const apiEdt = (params: {
-  niveau?: string; filiere?: string; semestreId?: string;
+  semestreId?: string; niveauId?: string; filiereId?: string; salleId?: string;
+  enseignantId?: string;
 } = {}) => {
   const q = new URLSearchParams();
-  if (params.niveau) q.set("niveau", params.niveau);
-  if (params.filiere) q.set("filiere", params.filiere);
   if (params.semestreId) q.set("semestreId", params.semestreId);
+  if (params.niveauId) q.set("niveauId", params.niveauId);
+  if (params.filiereId) q.set("filiereId", params.filiereId);
+  if (params.salleId) q.set("salleId", params.salleId);
+  if (params.enseignantId) q.set("enseignantId", params.enseignantId);
   const s = q.toString();
   return request<SlotEDT[]>(`/api/edt${s ? `?${s}` : ""}`);
 };
 export const apiEdtMe = (semestreId?: string) =>
   request<SlotEDT[]>(`/api/edt/me${semestreId ? `?semestreId=${semestreId}` : ""}`);
+export interface GenerationEdtResult {
+  slotsCrees: number;
+  coursNonPlanifies: string[];
+  conflits: { id: string; type: string; description: string }[];
+}
+
 export const apiGenererEdt = (semestreId: string) =>
-  request<{ slots: SlotEDT[]; conflits: number }>(`/api/edt/generate/${semestreId}`, { method: "POST" });
+  request<GenerationEdtResult>(`/api/edt/generate/${semestreId}`, { method: "POST" });
 
 // ───── Notifications ───────────────────────────────────────
 export const apiNotifications = () => request<Notif[]>("/api/notifications");

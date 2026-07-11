@@ -8,6 +8,7 @@ export interface User {
   role: Role;
   specialite?: string;
   statut?: "Permanent" | "Vacataire" | "Invite";
+  enseignantId?: string;
 }
 
 export type CoursType = "CM" | "TD" | "TP";
@@ -20,6 +21,8 @@ export interface Enseignant {
   specialite: string;
   statut: "Permanent" | "Vacataire" | "Invite";
   nbCours: number;
+  heuresDisponibles?: number;
+  heuresPlanifiees?: number;
 }
 
 export interface Salle {

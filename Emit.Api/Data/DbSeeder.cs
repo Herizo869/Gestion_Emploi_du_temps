@@ -285,15 +285,21 @@ public static class DbSeeder
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
             Role         = Role.Admin
         });
-        db.Users.Add(new User
+
+        // Comptes enseignants (un pour chaque enseignant seedé)
+        var enseignantsList = new[] { e1, e2, e3, e4, e5, e6, e7, e8, e9 };
+        foreach (var ens in enseignantsList)
         {
-            Prenom       = e1.Prenom,
-            Nom          = e1.Nom,
-            Email        = e1.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Enseignant@123"),
-            Role         = Role.Enseignant,
-            Enseignant   = e1
-        });
+            db.Users.Add(new User
+            {
+                Prenom       = ens.Prenom,
+                Nom          = ens.Nom,
+                Email        = ens.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Enseignant@123"),
+                Role         = Role.Enseignant,
+                Enseignant   = ens
+            });
+        }
 
         await db.SaveChangesAsync();
     }

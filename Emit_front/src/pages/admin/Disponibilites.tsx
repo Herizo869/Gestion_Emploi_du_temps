@@ -160,8 +160,8 @@ export default function AdminDisponibilites() {
                 <option key={s.id} value={s.id}>{s.libelle} — {s.annee}</option>
               ))}
             </select>
-            {current && <Badge tone={current.statut === "permanent" ? "green" : current.statut === "vacataire" ? "orange" : "purple"}>
-              {current.statut === "permanent" ? "Permanent" : current.statut === "vacataire" ? "Vacataire" : "Invité"}
+            {current && <Badge tone={current.statut === "Permanent" ? "green" : current.statut === "Vacataire" ? "orange" : "purple"}>
+              {current.statut === "Permanent" ? "Permanent" : current.statut === "Vacataire" ? "Vacataire" : "Invité"}
             </Badge>}
             {changed && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 animate-pulse">

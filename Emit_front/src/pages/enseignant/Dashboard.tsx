@@ -13,7 +13,7 @@ const typeTone = { CM: "navy", TD: "sky", TP: "green" } as const;
 export default function EnsDashboard() {
   const { user } = useAuth();
   const { edt: edtL3Info, cours, notifications } = useData();
-  const myId = user?.id ?? "";
+  const myId = user?.enseignantId ?? "";
   const myCours = cours.filter(c => c.enseignantIds.includes(myId));
 
   return (

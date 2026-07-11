@@ -10,13 +10,13 @@ import { useData } from "@/context/DataContext";
 import { apiCreateEnseignant, apiUpdateEnseignant, apiDeleteEnseignant } from "@/lib/api";
 import type { Enseignant } from "@/types";
 
-const statutTone = { permanent: "green", vacataire: "orange", invite: "purple" } as const;
+const statutTone = { Permanent: "green", Vacataire: "orange", Invite: "purple" } as const;
 const empty: Omit<Enseignant, "id"> = {
   prenom: "",
   nom: "",
   email: "",
   specialite: "",
-  statut: "permanent",
+  statut: "Permanent",
   nbCours: 0,
 };
 
@@ -168,9 +168,9 @@ export default function AdminEnseignants() {
               onChange={(e) => setStatut(e.target.value)}
             >
               <option value="">Tous statuts</option>
-              <option value="permanent">Permanent</option>
-              <option value="vacataire">Vacataire</option>
-              <option value="invite">Invité</option>
+              <option value="Permanent">Permanent</option>
+              <option value="Vacataire">Vacataire</option>
+              <option value="Invite">Invité</option>
             </select>
             <select
               className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
@@ -223,7 +223,7 @@ export default function AdminEnseignants() {
                           </div>
                           <span
                             className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white ${
-                              e.statut === "permanent" ? "bg-green-500" : e.statut === "vacataire" ? "bg-orange-400" : "bg-purple-400"
+                              e.statut === "Permanent" ? "bg-green-500" : e.statut === "Vacataire" ? "bg-orange-400" : "bg-purple-400"
                             }`}
                           />
                         </div>
@@ -325,7 +325,7 @@ export default function AdminEnseignants() {
                     {/* ── Footer ── */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
                       <Badge tone={statutTone[e.statut]}>
-                        {e.statut === "permanent" ? "Permanent" : e.statut === "vacataire" ? "Vacataire" : "Invité"}
+                        {e.statut === "Permanent" ? "Permanent" : e.statut === "Vacataire" ? "Vacataire" : "Invité"}
                       </Badge>
                       <button
                         onClick={() => navigate(`/admin/disponibilites?enseignant=${e.id}`)}
@@ -366,10 +366,9 @@ export default function AdminEnseignants() {
           <Input label="Spécialité" placeholder="Génie logiciel" value={form.specialite} onChange={f("specialite")} />
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Statut</label>
-          <select value={form.statut} onChange={f("statut")} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
-            <option value="permanent">Permanent</option>
-            <option value="vacataire">Vacataire</option>
-            <option value="invite">Invité</option>
+          <select value={form.statut} onChange={f("statut")} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">              <option value="Permanent">Permanent</option>
+              <option value="Vacataire">Vacataire</option>
+              <option value="Invite">Invité</option>
           </select>
           </div>
         </div>

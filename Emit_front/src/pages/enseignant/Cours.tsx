@@ -8,7 +8,7 @@ const typeTone = { CM: "navy", TD: "sky", TP: "green" } as const;
 export default function EnsCours() {
   const { cours } = useData();
   const { user } = useAuth();
-  const mine = cours.filter(c => c.enseignantIds.includes(user?.id ?? ""));
+  const mine = cours.filter(c => c.enseignantIds.includes(user?.enseignantId ?? ""));
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold text-slate-900">Mes cours assignés</h1>
