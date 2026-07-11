@@ -146,13 +146,14 @@ export const apiJournal = () => request<LogEntry[]>("/api/journal");
 
 // ───── Disponibilités
 export interface Dispo { jour: string; creneau: string; estDisponible: boolean; estIndisponible: boolean; }
-export const apiMyDispos = () => request<Dispo[]>("/api/disponibilites/me");
-export const apiSaveMyDispos = (dispos: Dispo[]) =>
-  request<void>("/api/disponibilites/me", { method: "PUT", body: JSON.stringify(dispos) });
-export const apiDisposEnseignant = (enseignantId: string) =>
-  request<Dispo[]>(`/api/disponibilites/${enseignantId}`);
-export const apiSaveDisponibilites = (enseignantId: string, disponibilites: Dispo[]) =>
-  request<void>(`/api/disponibilites/${enseignantId}`, { method: "PUT", body: JSON.stringify(disponibilites) });
+export const apiMyDispos = (semestreId: string) =>
+  request<Dispo[]>(`/api/disponibilites/me?semestreId=${semestreId}`);
+export const apiSaveMyDispos = (semestreId: string, dispos: Dispo[]) =>
+  request<void>(`/api/disponibilites/me?semestreId=${semestreId}`, { method: "PUT", body: JSON.stringify(dispos) });
+export const apiDisposEnseignant = (enseignantId: string, semestreId: string) =>
+  request<Dispo[]>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}`);
+export const apiSaveDisponibilites = (enseignantId: string, semestreId: string, disponibilites: Dispo[]) =>
+  request<void>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}`, { method: "PUT", body: JSON.stringify(disponibilites) });
 
 export const apiDepublierSemestre = (id: string) =>
   request<Semestre>(`/api/semestres/${id}/depublier`, { method: "POST" });

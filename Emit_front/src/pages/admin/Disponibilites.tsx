@@ -35,8 +35,9 @@ function countHours(grid: State[][]): number {
 }
 
 export default function AdminDisponibilites() {
-  const { enseignants, refresh } = useData();
+  const { enseignants, semestres, refresh } = useData();
   const [selectedId, setSelectedId] = useState<string>("");
+  const [semestreId, setSemestreId] = useState<string>("");
   const [grid, setGrid] = useState<State[][]>(() =>
     Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State))
   );
@@ -52,12 +53,19 @@ export default function AdminDisponibilites() {
     }
   }, [enseignants, selectedId]);
 
-  const loadDispos = useCallback(async (enseignantId: string) => {
-    if (!enseignantId) return;
+  useEffect(() => {
+    if (semestres.length > 0 && !semestreId) {
+      const publie = [...semestres].reverse().find(s => s.statut === "publie");
+      setSemestreId((publie ?? semestres[semestres.length - 1]).id);
+    }
+  }, [semestres, semestreId]);
+
+  const loadDispos = useCallback(async (enseignantId: string, semId: string) => {
+    if (!enseignantId || !semId) return;
     setLoadingTeacher(true);
     setError(null);
     try {
-      const data = await apiDisposEnseignant(enseignantId);
+      const data = await apiDisposEnseignant(enseignantId, semId);
       setGrid(data.length > 0 ? disposToGrid(data) : Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State)));
     } catch (e: any) {
       setError(e.message ?? "Erreur lors du chargement des disponibilités");
@@ -68,7 +76,7 @@ export default function AdminDisponibilites() {
     }
   }, []);
 
-  useEffect(() => { loadDispos(selectedId); }, [selectedId, loadDispos]);
+  useEffect(() => { loadDispos(selectedId, semestreId); }, [selectedId, semestreId, loadDispos]);
 
   const toggle = (row: number, col: number) => {
     setGrid((prev) => {
@@ -82,6 +90,7 @@ export default function AdminDisponibilites() {
 
   const handleSave = async () => {
     if (!selectedId) return setError("Veuillez sélectionner un enseignant");
+    if (!semestreId) return setError("Veuillez sélectionner un semestre");
     setSaving(true);
     setError(null);
     try {
@@ -94,7 +103,7 @@ export default function AdminDisponibilites() {
           }
         }
       }
-      await apiSaveDisponibilites(selectedId, disponibilites);
+      await apiSaveDisponibilites(selectedId, semestreId, disponibilites);
       setSaved(true);
       setChanged(false);
       await refresh();
@@ -142,6 +151,13 @@ export default function AdminDisponibilites() {
               className="h-10 min-w-[240px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
               {enseignants.map((e: Enseignant) => (
                 <option key={e.id} value={e.id}>{e.prenom} {e.nom} — {e.specialite}</option>
+              ))}
+            </select>
+            <label className="text-sm font-medium text-slate-700">Semestre :</label>
+            <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)}
+              className="h-10 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+              {semestres.map(s => (
+                <option key={s.id} value={s.id}>{s.libelle} — {s.annee}</option>
               ))}
             </select>
             {current && <Badge tone={current.statut === "permanent" ? "green" : current.statut === "vacataire" ? "orange" : "purple"}>
@@ -246,7 +262,7 @@ export default function AdminDisponibilites() {
               <Button size="sm" variant="outline" onClick={() => { setGrid(Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State))); setChanged(true); }}>
                 Tout effacer
               </Button>
-              <Button size="sm" variant="outline" onClick={() => { if (selectedId) loadDispos(selectedId); }}>
+              <Button size="sm" variant="outline" onClick={() => { if (selectedId) loadDispos(selectedId, semestreId); }}>
                 Recharger
               </Button>
             </div>

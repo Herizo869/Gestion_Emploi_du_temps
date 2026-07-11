@@ -3,10 +3,11 @@ import { Save, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from "luci
 import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { apiMyDispos, apiSaveMyDispos } from "@/lib/api";
+import { useData } from "@/context/DataContext";
 
 const CRENEAUX = [
-  "07h30 - 09h00", "09h15 - 10h45", "11h00 - 12h30",
-  "13h30 - 15h00", "15h15 - 16h45", "17h00 - 18h30",
+  "07h00 - 08h00", "08h00 - 09h00", "09h00 - 10h00", "10h00 - 11h00", "11h00 - 12h00",
+  "14h00 - 15h00", "15h00 - 16h00", "16h00 - 17h00", "17h00 - 18h00",
 ] as const;
 const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"] as const;
 const NB_CRENEAUX = CRENEAUX.length;
@@ -15,6 +16,8 @@ const NB_JOURS = JOURS.length;
 type State = "dispo" | "indispo" | "vide";
 
 export default function EnsDisponibilites() {
+  const { semestres } = useData();
+  const [semestreId, setSemestreId] = useState<string>("");
   const [grid, setGrid] = useState<State[][]>(
     () => Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State))
   );
@@ -24,8 +27,18 @@ export default function EnsDisponibilites() {
   const [loading, setLoading] = useState(true);
   const [changed, setChanged] = useState(false);
 
+  // Sélectionne automatiquement le semestre publié le plus récent, sinon le dernier de la liste
   useEffect(() => {
-    apiMyDispos()
+    if (semestres.length > 0 && !semestreId) {
+      const publie = [...semestres].reverse().find(s => s.statut === "publie");
+      setSemestreId((publie ?? semestres[semestres.length - 1]).id);
+    }
+  }, [semestres, semestreId]);
+
+  useEffect(() => {
+    if (!semestreId) return;
+    setLoading(true);
+    apiMyDispos(semestreId)
       .then(dispos => {
         const newGrid = Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State));
         dispos.forEach(d => {
@@ -36,10 +49,11 @@ export default function EnsDisponibilites() {
           }
         });
         setGrid(newGrid);
+        setChanged(false);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [semestreId]);
 
   const toggle = (r: number, c: number) => {
     setGrid(g => {
@@ -52,6 +66,7 @@ export default function EnsDisponibilites() {
   };
 
   const handleSave = async () => {
+    if (!semestreId) return setError("Veuillez sélectionner un semestre");
     setSaving(true);
     setError(null);
     try {
@@ -64,7 +79,7 @@ export default function EnsDisponibilites() {
           }
         }
       }
-      await apiSaveMyDispos(disponibilites as any);
+      await apiSaveMyDispos(semestreId, disponibilites as any);
       setSaved(true);
       setChanged(false);
       setTimeout(() => setSaved(false), 3000);
@@ -73,19 +88,27 @@ export default function EnsDisponibilites() {
     } finally { setSaving(false); }
   };
 
-  const totalHours = grid.flat().filter(v => v === "dispo").length * 1.5;
+  const totalHours = grid.flat().filter(v => v === "dispo").length * 1;
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-slate-900">Mes disponibilités</h1>
-        <Button
-          leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          onClick={handleSave}
-          disabled={saving || loading}
-        >
-          {saving ? "Sauvegarde..." : "Sauvegarder"}
-        </Button>
+        <div className="flex items-center gap-3">
+          <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)}
+            className="h-10 min-w-[200px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            {semestres.map(s => (
+              <option key={s.id} value={s.id}>{s.libelle} — {s.annee}</option>
+            ))}
+          </select>
+          <Button
+            leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            onClick={handleSave}
+            disabled={saving || loading || !semestreId}
+          >
+            {saving ? "Sauvegarde..." : "Sauvegarder"}
+          </Button>
+        </div>
       </div>
 
       {saved && (

@@ -65,5 +65,10 @@ public class AppDbContext : DbContext
 
         b.Entity<Notification>()
             .HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
+
+        b.Entity<Disponibilite>()
+            .HasOne(d => d.Semestre).WithMany().HasForeignKey(d => d.SemestreId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<Disponibilite>()
+            .HasIndex(d => new { d.EnseignantId, d.SemestreId, d.Jour, d.Creneau }).IsUnique();
     }
 }

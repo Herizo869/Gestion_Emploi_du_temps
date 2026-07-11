@@ -21,13 +21,14 @@ public class EdtController : ControllerBase
     [HttpGet, AllowAnonymous]
     public async Task<ActionResult<IEnumerable<SlotEDTDto>>> Get(
         [FromQuery] Guid? semestreId, [FromQuery] Guid? niveauId,
-        [FromQuery] Guid? filiereId, [FromQuery] Guid? salleId)
+        [FromQuery] Guid? filiereId, [FromQuery] Guid? salleId, [FromQuery] Guid? enseignantId)
     {
         var q = Base();
         if (semestreId.HasValue) q = q.Where(s => s.SemestreId == semestreId);
         if (niveauId.HasValue)   q = q.Where(s => s.NiveauId == niveauId);
         if (filiereId.HasValue)  q = q.Where(s => s.FiliereId == filiereId);
         if (salleId.HasValue)    q = q.Where(s => s.SalleId == salleId);
+        if (enseignantId.HasValue) q = q.Where(s => s.EnseignantId == enseignantId);
         var list = await q.ToListAsync();
         return Ok(list.Select(SlotMapper.ToDto));
     }
@@ -54,6 +55,16 @@ public class EdtController : ControllerBase
     public async Task<ActionResult<List<ConflitDto>>> Conflits(Guid semestreId)
         => Ok(await _gen.DetectConflitsAsync(semestreId));
 
+    // Parse "07h00 - 08h00" -> (07:00, 08:00)
+    private static bool TryParseCreneau(string creneau, out TimeOnly debut, out TimeOnly fin)
+    {
+        debut = default; fin = default;
+        var parts = creneau.Split('-', StringSplitOptions.TrimEntries);
+        if (parts.Length != 2) return false;
+        return TimeOnly.TryParse(parts[0].Replace('h', ':'), out debut)
+            && TimeOnly.TryParse(parts[1].Replace('h', ':'), out fin);
+    }
+
     // PUT /api/edt/{id} — Admin : modification manuelle d'un créneau
     [HttpPut("{id:guid}"), Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(Guid id, [FromBody] SlotUpdateDto dto)
@@ -76,7 +87,17 @@ public class EdtController : ControllerBase
         var conflitSalle = autresSlots.FirstOrDefault(s => s.SalleId == dto.SalleId);
         var conflitEnseignant = autresSlots.FirstOrDefault(s => s.EnseignantId == dto.EnseignantId);
 
-        if (conflitSalle != null || conflitEnseignant != null)
+        // Nouveau : l'enseignant a-t-il déclaré être indisponible sur ce créneau ce jour-là ?
+        var indispoEnseignant = await _db.Disponibilites
+            .Where(d => d.SemestreId == slot.SemestreId
+                     && d.EnseignantId == dto.EnseignantId
+                     && d.EstIndisponible
+                     && d.Jour == dto.Jour.ToString())
+            .ToListAsync();
+        var conflitIndispo = indispoEnseignant.FirstOrDefault(d =>
+            TryParseCreneau(d.Creneau, out var db, out var df) && heureDebut < df && db < heureFin);
+
+        if (conflitSalle != null || conflitEnseignant != null || conflitIndispo != null)
         {
             var conflits = new List<ConflitDto>();
             if (conflitSalle != null)
@@ -93,6 +114,14 @@ public class EdtController : ControllerBase
                     Id = $"E-{conflitEnseignant.EnseignantId}-{dto.Jour}-{heureDebut:HH\\:mm}",
                     Type = "Enseignant",
                     Description = $"{conflitEnseignant.Enseignant.Prenom[0]}. {conflitEnseignant.Enseignant.Nom} déjà occupé(e) le {dto.Jour} à {heureDebut:HH\\:mm}",
+                    Date = DateTime.UtcNow
+                });
+            if (conflitIndispo != null)
+                conflits.Add(new ConflitDto
+                {
+                    Id = $"I-{dto.EnseignantId}-{dto.Jour}-{heureDebut:HH\\:mm}",
+                    Type = "Indisponibilite",
+                    Description = $"Cet enseignant a déclaré être indisponible le {dto.Jour} à {heureDebut:HH\\:mm}",
                     Date = DateTime.UtcNow
                 });
 

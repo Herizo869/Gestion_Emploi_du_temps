@@ -8,8 +8,8 @@ import { useData } from "@/context/DataContext";
 import { apiCreateSemestre, apiPublierSemestre, apiArchiverSemestre, apiDupliquerSemestre } from "@/lib/api";
 
 const CRENEAUX = [
-  "07h30 - 09h00", "09h15 - 10h45", "11h00 - 12h30",
-  "13h30 - 15h00", "15h15 - 16h45", "17h00 - 18h30",
+  "07h00 - 08h00", "08h00 - 09h00", "09h00 - 10h00", "10h00 - 11h00", "11h00 - 12h00",
+  "14h00 - 15h00", "15h00 - 16h00", "16h00 - 17h00", "17h00 - 18h00",
 ];
 const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"] as const;
 
