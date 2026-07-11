@@ -384,11 +384,7 @@ export default function AdminCours() {
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
             <select
               value={form.type}
-<<<<<<< HEAD
-              onChange={e => setForm(p => ({ ...p, type: e.target.value as import("@/types").CoursType }))}
-=======
               onChange={e => setForm(p => ({ ...p, type: e.target.value as CoursType }))}
->>>>>>> d0ac8a57633f9859e9b7c68497a93c65a2e5dbf2
               className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
             >
               <option>CM</option><option>TD</option><option>TP</option>
