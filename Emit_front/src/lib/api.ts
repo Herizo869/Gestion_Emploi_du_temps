@@ -3,7 +3,6 @@ import type {
   SlotEDT, Notif, LogEntry, User,
 } from "@/types";
 
-
 const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "https://localhost:5001").replace(/\/$/, "");
 const TOKEN_KEY = "emit-token";
 
@@ -29,31 +28,26 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
-    let body: any = null;
     try {
-      body = await res.json();
-      msg = body.message ?? body.error ?? msg;
+      const j = await res.json();
+      msg = j.message ?? j.error ?? msg;
     } catch { /* ignore */ }
-    const err = new Error(msg) as Error & { status?: number; body?: any };
-    err.status = res.status;
-    err.body = body;
-    throw err;
+    throw new Error(msg);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
-// ───── Auth
+// ───── Auth ────────────────────────────────────────────────
 export interface LoginResponse { token: string; user: User; }
 export const apiLogin = (email: string, password: string) =>
   request<LoginResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
-
 export const apiMe = () => request<User>("/api/auth/me");
 
-// ───── Enseignants
+// ───── Enseignants ─────────────────────────────────────────
 export const apiEnseignants = () => request<Enseignant[]>("/api/enseignants");
 export const apiCreateEnseignant = (e: Partial<Enseignant>) =>
   request<Enseignant>("/api/enseignants", { method: "POST", body: JSON.stringify(e) });
@@ -62,7 +56,7 @@ export const apiUpdateEnseignant = (id: string, e: Partial<Enseignant>) =>
 export const apiDeleteEnseignant = (id: string) =>
   request<void>(`/api/enseignants/${id}`, { method: "DELETE" });
 
-// ───── Salles
+// ───── Salles ──────────────────────────────────────────────
 export const apiSalles = () => request<Salle[]>("/api/salles");
 export const apiCreateSalle = (s: Partial<Salle>) =>
   request<Salle>("/api/salles", { method: "POST", body: JSON.stringify(s) });
@@ -71,7 +65,7 @@ export const apiUpdateSalle = (id: string, s: Partial<Salle>) =>
 export const apiDeleteSalle = (id: string) =>
   request<void>(`/api/salles/${id}`, { method: "DELETE" });
 
-// ───── Niveaux & Filières
+// ───── Niveaux & Filières ──────────────────────────────────
 export const apiNiveaux = () => request<Niveau[]>("/api/niveaux");
 export const apiCreateNiveau = (data: { libelle: string; effectifMax: number }) =>
   request<Niveau>("/api/niveaux", { method: "POST", body: JSON.stringify(data) });
@@ -80,7 +74,7 @@ export const apiCreateFiliere = (niveauId: string, data: { libelle: string; desc
 export const apiDeleteFiliere = (id: string) =>
   request<void>(`/api/filieres/${id}`, { method: "DELETE" });
 
-// ───── Cours
+// ───── Cours ───────────────────────────────────────────────
 export const apiCours = () => request<Cours[]>("/api/cours");
 export const apiCreateCours = (c: Partial<Cours>) =>
   request<Cours>("/api/cours", { method: "POST", body: JSON.stringify(c) });
@@ -89,7 +83,7 @@ export const apiUpdateCours = (id: string, c: Partial<Cours>) =>
 export const apiDeleteCours = (id: string) =>
   request<void>(`/api/cours/${id}`, { method: "DELETE" });
 
-// ───── Semestres 
+// ───── Semestres ───────────────────────────────────────────
 export const apiSemestres = () => request<Semestre[]>("/api/semestres");
 export const apiCreateSemestre = (data: { libelle: string; annee: string }) =>
   request<Semestre>("/api/semestres", { method: "POST", body: JSON.stringify(data) });
@@ -99,64 +93,47 @@ export const apiArchiverSemestre = (id: string) =>
   request<Semestre>(`/api/semestres/${id}/archiver`, { method: "POST" });
 export const apiDupliquerSemestre = (id: string) =>
   request<Semestre>(`/api/semestres/${id}/dupliquer`, { method: "POST" });
+export const apiDepublierSemestre = (id: string) =>
+  request<Semestre>(`/api/semestres/${id}/depublier`, { method: "POST" });
 
-// ───── EDT 
+// ───── EDT ─────────────────────────────────────────────────
 export const apiEdt = (params: {
-  niveauId?: string; filiereId?: string; semestreId?: string; salleId?: string;
+  niveau?: string; filiere?: string; semestreId?: string;
 } = {}) => {
   const q = new URLSearchParams();
-  if (params.niveauId) q.set("niveauId", params.niveauId);
-  if (params.filiereId) q.set("filiereId", params.filiereId);
+  if (params.niveau) q.set("niveau", params.niveau);
+  if (params.filiere) q.set("filiere", params.filiere);
   if (params.semestreId) q.set("semestreId", params.semestreId);
-  if (params.salleId) q.set("salleId", params.salleId);
   const s = q.toString();
   return request<SlotEDT[]>(`/api/edt${s ? `?${s}` : ""}`);
 };
 export const apiEdtMe = (semestreId?: string) =>
   request<SlotEDT[]>(`/api/edt/me${semestreId ? `?semestreId=${semestreId}` : ""}`);
-
-export interface Conflit { id: string; type: string; description: string; date: string; }
-export interface GenerationEdtResult {
-  slotsCrees: number;
-  coursNonPlanifies: string[];
-  conflits: Conflit[];
-}
 export const apiGenererEdt = (semestreId: string) =>
-  request<GenerationEdtResult>(`/api/edt/generate/${semestreId}`, { method: "POST" });
+  request<{ slots: SlotEDT[]; conflits: number }>(`/api/edt/generate/${semestreId}`, { method: "POST" });
 
-export interface ConflitInfo { id: string; type: string; description: string; date: string; }
-export interface SlotConflitError { message: string; conflits: ConflitInfo[]; sallesLibres: string[]; }
-export interface SlotUpdatePayload {
-  salleId: string;
-  enseignantId: string;
-  jour: SlotEDT["jour"];
-  heureDebut: string;
-  heureFin: string;
-}
-export const apiUpdateSlot = (id: string, data: SlotUpdatePayload) =>
-  request<SlotEDT>(`/api/edt/${id}`, { method: "PUT", body: JSON.stringify(data) });
-
-// ───── Notifications
+// ───── Notifications ───────────────────────────────────────
 export const apiNotifications = () => request<Notif[]>("/api/notifications");
 export const apiMarkNotifRead = (id: string) =>
   request<Notif>(`/api/notifications/${id}/read`, { method: "POST" });
 
-// ───── Journal / Historique
+// ───── Journal / Historique ────────────────────────────────
 export const apiJournal = () => request<LogEntry[]>("/api/journal");
 
-// ───── Disponibilités
-export interface Dispo { jour: string; creneau: string; estDisponible: boolean; estIndisponible: boolean; }
-export const apiMyDispos = (semestreId: string) =>
-  request<Dispo[]>(`/api/disponibilites/me?semestreId=${semestreId}`);
+// ───── Disponibilités ──────────────────────────────────────
+export interface Dispo {
+  jour: string;
+  creneau: string;
+  estDisponible: boolean;
+  estIndisponible: boolean;
+}
+export const apiMyDispos = (semestreId: string) => request<Dispo[]>(`/api/disponibilites/me?semestreId=${semestreId}`);
 export const apiSaveMyDispos = (semestreId: string, dispos: Dispo[]) =>
   request<void>(`/api/disponibilites/me?semestreId=${semestreId}`, { method: "PUT", body: JSON.stringify(dispos) });
 export const apiDisposEnseignant = (enseignantId: string, semestreId: string) =>
   request<Dispo[]>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}`);
 export const apiSaveDisponibilites = (enseignantId: string, semestreId: string, disponibilites: Dispo[]) =>
   request<void>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}`, { method: "PUT", body: JSON.stringify(disponibilites) });
-
-export const apiDepublierSemestre = (id: string) =>
-  request<Semestre>(`/api/semestres/${id}/depublier`, { method: "POST" });
 
 // ───── Export ──────────────────────────────────────────────
 export interface ExportParams {
@@ -177,16 +154,12 @@ function buildExportQuery(params: ExportParams) {
   return q.toString();
 }
 
-// Télécharge un fichier binaire (PDF/CSV) et déclenche le download navigateur.
-// Utilise fetch + Blob car ces endpoints ne renvoient pas du JSON.
 async function downloadFile(path: string, filename: string) {
   const headers = new Headers();
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-
   const res = await fetch(`${BASE}${path}`, { headers });
   if (!res.ok) throw new Error(`Échec du téléchargement (${res.status})`);
-
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -200,6 +173,5 @@ async function downloadFile(path: string, filename: string) {
 
 export const apiDownloadPdf = (params: ExportParams = {}) =>
   downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf");
-
 export const apiDownloadCsv = (params: ExportParams = {}) =>
   downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv");
