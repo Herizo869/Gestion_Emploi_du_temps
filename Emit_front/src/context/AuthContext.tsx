@@ -56,9 +56,7 @@ async function fetchProfile(supabaseUser: SupabaseUser): Promise<AppUser> {
     console.warn("[AuthContext] Impossible de charger le profil :", error.message);
   }
 
-  console.debug("[AuthContext] profil chargé :", profile?.email, "| rôle :", profile?.role);
-
-  // Le rôle vient uniquement de profiles.role (sécurisé côté BDD par RLS + trigger)
+  // Fallback enseignant si le profil est introuvable ou role invalide
   const role: UserRole =
     profile?.role === "admin" ? "admin" : "enseignant";
 
@@ -75,7 +73,6 @@ async function fetchProfile(supabaseUser: SupabaseUser): Promise<AppUser> {
       profile?.email_verified ??
       supabaseUser.email_confirmed_at != null,
     role,
-    // specialite et statut peuvent être ajoutés à la table profiles si nécessaire
     specialite: null,
     statut: null,
   };

@@ -85,8 +85,17 @@ export default function Login() {
     const r = await login(email, pwd);
     setLoading(false);
 
-    if (!r.ok) return setErr(r.error ?? "Erreur de connexion.");
-    // Redirection immédiate en utilisant le rôle lu depuis profiles.role
+    if (!r.ok) {
+      // Si l'email n'est pas confirmé, basculer vers le panneau de vérification
+      if (r.error?.includes("confirmé") || r.error?.includes("Email not confirmed")) {
+        setMode("verify");
+        setResendCooldown(60);
+        return;
+      }
+      return setErr(r.error ?? "Erreur de connexion.");
+    }
+
+    // Redirection selon le rôle lu depuis public.profiles.role (sécurisé BDD)
     nav(r.role === "admin" ? "/admin/dashboard" : "/enseignant/dashboard", { replace: true });
   };
 
@@ -462,6 +471,8 @@ function PasswordStrength({ password }: { password: string }) {
 }
 
 // Accès rapide pour le développement
+// ⚠️  Remplacez les mots de passe ci-dessous par les vrais mots de passe de vos comptes Supabase.
+// L'email admin correspond au compte promu via : UPDATE public.profiles SET role='admin' WHERE email='miaroandriamanalintsoa007@gmail.com';
 function DevFill({ onFill }: { onFill: (email: string, pwd: string) => void }) {
   return (
     <div className="mt-6 border-t border-slate-100 pt-4">
@@ -469,13 +480,23 @@ function DevFill({ onFill }: { onFill: (email: string, pwd: string) => void }) {
         Accès rapide (dev)
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <Button id="dev-admin" variant="outline" size="sm" onClick={() => onFill("admin@emit.mg", "Admin123!")}>
+        {/* Email admin promu dans Supabase via UPDATE public.profiles SET role='admin' */}
+        <Button
+          id="dev-admin"
+          variant="outline"
+          size="sm"
+          onClick={() => onFill("miaroandriamanalintsoa007@gmail.com", "")}
+          title="miaroandriamanalintsoa007@gmail.com — rôle admin dans public.profiles"
+        >
           Admin
         </Button>
         <Button id="dev-teacher" variant="outline" size="sm" onClick={() => onFill("herizo@emit.mg", "Prof1234!")}>
           Enseignant
         </Button>
       </div>
+      <p className="mt-1 text-center text-[10px] text-slate-300">
+        Admin : miaroandriamanalintsoa007@gmail.com
+      </p>
     </div>
   );
 }

@@ -7,7 +7,9 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
     {
-        await db.Database.EnsureCreatedAsync();
+        // MigrateAsync applique toutes les migrations EF Core en attente (Init, AddDomaineToFiliere, AddDisponibilites…)
+        // EnsureCreatedAsync serait ignorer les migrations → ne jamais utiliser avec un projet qui a des migrations.
+        await db.Database.MigrateAsync();
         if (await db.Users.AnyAsync()) return;
 
         // ══════════════════════════════════════════════════
