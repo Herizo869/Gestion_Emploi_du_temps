@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -14,9 +14,11 @@ import {
   User,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import type { UserRole } from "@/context/AuthContext";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Logo from "@/components/Logo";
+import AuthSplash from "@/components/AuthSplash";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +45,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Splash post-auth
+  const [splash, setSplash] = useState<{ role: UserRole; target: string } | null>(null);
 
   // Redirection si déjà connecté (session Supabase restaurée au démarrage)
   useEffect(() => {
@@ -95,8 +100,9 @@ export default function Login() {
       return setErr(r.error ?? "Erreur de connexion.");
     }
 
-    // Redirection selon le rôle lu depuis public.profiles.role (sécurisé BDD)
-    nav(r.role === "admin" ? "/admin/dashboard" : "/enseignant/dashboard", { replace: true });
+    // Afficher le splash screen 4s avant redirection
+    const target = r.role === "admin" ? "/admin/dashboard" : "/enseignant/dashboard";
+    setSplash({ role: r.role!, target });
   };
 
   // ── Soumettre Inscription ─────────────────────────────────────────────────
@@ -143,11 +149,27 @@ export default function Login() {
 
   // ─── Rendu ────────────────────────────────────────────────────────────────
 
+  // Callback stable pour éviter les re-renders du splash
+  const handleSplashDone = useCallback(() => {
+    if (splash) nav(splash.target, { replace: true });
+  }, [splash, nav]);
+
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-emit-navy">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-white" />
       </div>
+    );
+  }
+
+  // Affichage du splash post-auth
+  if (splash) {
+    return (
+      <AuthSplash
+        role={splash.role}
+        userName={user?.full_name}
+        onDone={handleSplashDone}
+      />
     );
   }
 
