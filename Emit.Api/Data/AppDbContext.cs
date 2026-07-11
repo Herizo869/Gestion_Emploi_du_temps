@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<SlotEDT> Slots => Set<SlotEDT>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<LogEntry> Journal => Set<LogEntry>();
+    public DbSet<Disponibilite> Disponibilites => Set<Disponibilite>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -64,5 +65,10 @@ public class AppDbContext : DbContext
 
         b.Entity<Notification>()
             .HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
+
+        b.Entity<Disponibilite>()
+            .HasOne(d => d.Semestre).WithMany().HasForeignKey(d => d.SemestreId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<Disponibilite>()
+            .HasIndex(d => new { d.EnseignantId, d.SemestreId, d.Jour, d.Creneau }).IsUnique();
     }
 }

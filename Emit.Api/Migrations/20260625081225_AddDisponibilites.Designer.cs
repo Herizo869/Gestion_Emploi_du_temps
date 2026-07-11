@@ -3,6 +3,7 @@ using System;
 using Emit.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Emit.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260625081225_AddDisponibilites")]
+    partial class AddDisponibilites
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -94,15 +97,9 @@ namespace Emit.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("SemestreId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("SemestreId");
-
-                    b.HasIndex("EnseignantId", "SemestreId", "Jour", "Creneau")
-                        .IsUnique();
+                    b.HasIndex("EnseignantId");
 
                     b.ToTable("Disponibilites");
                 });
@@ -450,20 +447,12 @@ namespace Emit.Api.Migrations
             modelBuilder.Entity("Emit.Api.Entities.Disponibilite", b =>
                 {
                     b.HasOne("Emit.Api.Entities.Enseignant", "Enseignant")
-                        .WithMany("Disponibilites")
+                        .WithMany()
                         .HasForeignKey("EnseignantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Emit.Api.Entities.Semestre", "Semestre")
-                        .WithMany()
-                        .HasForeignKey("SemestreId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Enseignant");
-
-                    b.Navigation("Semestre");
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.Filiere", b =>
@@ -559,8 +548,6 @@ namespace Emit.Api.Migrations
             modelBuilder.Entity("Emit.Api.Entities.Enseignant", b =>
                 {
                     b.Navigation("Cours");
-
-                    b.Navigation("Disponibilites");
 
                     b.Navigation("Slots");
                 });

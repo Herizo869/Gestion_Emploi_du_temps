@@ -1,13 +1,5 @@
-// ============================================================
-// Client API EMIT — branché sur le backend ASP.NET Core
-// ============================================================
-//
-// Configurer l'URL via .env  →  VITE_API_URL=https://localhost:5001
-// Le token JWT (issu de /api/auth/login) est stocké dans localStorage
-// puis injecté en header `Authorization: Bearer <token>`.
-
 import type {
-  Enseignant, Salle, Cours, Niveau, Semestre,
+  Enseignant, Salle, Cours, Niveau, Filiere, Semestre,
   SlotEDT, Notif, LogEntry, User,
 } from "@/types";
 
@@ -53,7 +45,6 @@ export const apiLogin = (email: string, password: string) =>
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
-
 export const apiMe = () => request<User>("/api/auth/me");
 
 // ───── Enseignants ─────────────────────────────────────────
@@ -76,6 +67,12 @@ export const apiDeleteSalle = (id: string) =>
 
 // ───── Niveaux & Filières ──────────────────────────────────
 export const apiNiveaux = () => request<Niveau[]>("/api/niveaux");
+export const apiCreateNiveau = (data: { libelle: string; effectifMax: number }) =>
+  request<Niveau>("/api/niveaux", { method: "POST", body: JSON.stringify(data) });
+export const apiCreateFiliere = (niveauId: string, data: { libelle: string; description: string }) =>
+  request<Filiere>(`/api/filieres?niveauId=${niveauId}`, { method: "POST", body: JSON.stringify(data) });
+export const apiDeleteFiliere = (id: string) =>
+  request<void>(`/api/filieres/${id}`, { method: "DELETE" });
 
 // ───── Cours ───────────────────────────────────────────────
 export const apiCours = () => request<Cours[]>("/api/cours");
@@ -88,8 +85,16 @@ export const apiDeleteCours = (id: string) =>
 
 // ───── Semestres ───────────────────────────────────────────
 export const apiSemestres = () => request<Semestre[]>("/api/semestres");
+export const apiCreateSemestre = (data: { libelle: string; annee: string }) =>
+  request<Semestre>("/api/semestres", { method: "POST", body: JSON.stringify(data) });
 export const apiPublierSemestre = (id: string) =>
   request<Semestre>(`/api/semestres/${id}/publier`, { method: "POST" });
+export const apiArchiverSemestre = (id: string) =>
+  request<Semestre>(`/api/semestres/${id}/archiver`, { method: "POST" });
+export const apiDupliquerSemestre = (id: string) =>
+  request<Semestre>(`/api/semestres/${id}/dupliquer`, { method: "POST" });
+export const apiDepublierSemestre = (id: string) =>
+  request<Semestre>(`/api/semestres/${id}/depublier`, { method: "POST" });
 
 // ───── EDT ─────────────────────────────────────────────────
 export const apiEdt = (params: {
@@ -115,10 +120,58 @@ export const apiMarkNotifRead = (id: string) =>
 // ───── Journal / Historique ────────────────────────────────
 export const apiJournal = () => request<LogEntry[]>("/api/journal");
 
-// ───── Disponibilités enseignant ───────────────────────────
-export interface Dispo { jour: string; debut: string; fin: string; }
-export const apiMyDispos = () => request<Dispo[]>("/api/disponibilites/me");
-export const apiSaveMyDispos = (dispos: Dispo[]) =>
-  request<void>("/api/disponibilites/me", { method: "PUT", body: JSON.stringify(dispos) });
-export const apiDisposEnseignant = (enseignantId: string) =>
-  request<Dispo[]>(`/api/disponibilites/${enseignantId}`);
+// ───── Disponibilités ──────────────────────────────────────
+export interface Dispo {
+  jour: string;
+  creneau: string;
+  estDisponible: boolean;
+  estIndisponible: boolean;
+}
+export const apiMyDispos = (semestreId: string) => request<Dispo[]>(`/api/disponibilites/me?semestreId=${semestreId}`);
+export const apiSaveMyDispos = (semestreId: string, dispos: Dispo[]) =>
+  request<void>(`/api/disponibilites/me?semestreId=${semestreId}`, { method: "PUT", body: JSON.stringify(dispos) });
+export const apiDisposEnseignant = (enseignantId: string, semestreId: string) =>
+  request<Dispo[]>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}`);
+export const apiSaveDisponibilites = (enseignantId: string, semestreId: string, disponibilites: Dispo[]) =>
+  request<void>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}`, { method: "PUT", body: JSON.stringify(disponibilites) });
+
+// ───── Export ──────────────────────────────────────────────
+export interface ExportParams {
+  semestreId?: string;
+  niveauId?: string;
+  filiereId?: string;
+  salleId?: string;
+  orientation?: "portrait" | "paysage";
+}
+
+function buildExportQuery(params: ExportParams) {
+  const q = new URLSearchParams();
+  if (params.semestreId) q.set("semestreId", params.semestreId);
+  if (params.niveauId) q.set("niveauId", params.niveauId);
+  if (params.filiereId) q.set("filiereId", params.filiereId);
+  if (params.salleId) q.set("salleId", params.salleId);
+  if (params.orientation) q.set("orientation", params.orientation);
+  return q.toString();
+}
+
+async function downloadFile(path: string, filename: string) {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const res = await fetch(`${BASE}${path}`, { headers });
+  if (!res.ok) throw new Error(`Échec du téléchargement (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export const apiDownloadPdf = (params: ExportParams = {}) =>
+  downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf");
+export const apiDownloadCsv = (params: ExportParams = {}) =>
+  downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv");

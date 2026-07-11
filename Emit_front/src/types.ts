@@ -7,7 +7,7 @@ export interface User {
   email: string;
   role: Role;
   specialite?: string;
-  statut?: "permanent" | "vacataire" | "invite";
+  statut?: "Permanent" | "Vacataire" | "Invite";
 }
 
 export type CoursType = "CM" | "TD" | "TP";
@@ -18,7 +18,7 @@ export interface Enseignant {
   nom: string;
   email: string;
   specialite: string;
-  statut: "permanent" | "vacataire" | "invite";
+  statut: "Permanent" | "Vacataire" | "Invite";
   nbCours: number;
 }
 
@@ -49,8 +49,10 @@ export interface Filiere {
   id: string;
   libelle: string;
   description: string;
+  domaine?: string;
   nbCours: number;
 }
+
 export interface Niveau {
   id: string;
   libelle: "L1" | "L2" | "L3" | "M1" | "M2";

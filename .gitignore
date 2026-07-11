@@ -1,2 +1,34 @@
+# ─── Node / JS ─────────────────────────────────────────
 node_modules
+Emit_front/node_modules/
 
+# ─── Build output ──────────────────────────────────────
+Emit_front/dist/
+Emit_front/build/
+dist/
+build/
+
+# ─── .NET build artifacts ──────────────────────────────
+Emit.Api/bin/
+Emit.Api/obj/
+**/bin/
+**/obj/
+
+# ─── TypeScript build info ─────────────────────────────
+*.tsbuildinfo
+
+# ─── IDE ──────────────────────────────────────────────
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+
+# ─── OS ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Temp / generated ──────────────────────────────────
+*.log
+response.json

@@ -37,6 +37,45 @@ public class EdtGeneratorService : IEdtGeneratorService
     private static readonly Jour[] Jours =
         { Jour.Lundi, Jour.Mardi, Jour.Mercredi, Jour.Jeudi, Jour.Vendredi };
 
+    // Parse "07h00 - 08h00" -> (07:00, 08:00). Retourne false si le format ne matche pas.
+    private static bool TryParseCreneau(string creneau, out TimeOnly debut, out TimeOnly fin)
+    {
+        debut = default; fin = default;
+        var parts = creneau.Split('-', StringSplitOptions.TrimEntries);
+        if (parts.Length != 2) return false;
+        return TimeOnly.TryParse(parts[0].Replace('h', ':'), out debut)
+            && TimeOnly.TryParse(parts[1].Replace('h', ':'), out fin);
+    }
+
+    // Charge les indisponibilités déclarées pour le semestre, groupées par enseignant.
+    private async Task<Dictionary<Guid, List<(Jour jour, TimeOnly debut, TimeOnly fin)>>> ChargerIndisponibilitesAsync(Guid semestreId)
+    {
+        var indispos = await _db.Disponibilites
+            .Where(d => d.SemestreId == semestreId && d.EstIndisponible)
+            .ToListAsync();
+
+        var parEnseignant = new Dictionary<Guid, List<(Jour, TimeOnly, TimeOnly)>>();
+        foreach (var d in indispos)
+        {
+            if (!Enum.TryParse<Jour>(d.Jour, out var jourEnum)) continue;
+            if (!TryParseCreneau(d.Creneau, out var debut, out var fin)) continue;
+
+            if (!parEnseignant.TryGetValue(d.EnseignantId, out var liste))
+                parEnseignant[d.EnseignantId] = liste = new();
+            liste.Add((jourEnum, debut, fin));
+        }
+        return parEnseignant;
+    }
+
+    // Vrai si [debut,fin) chevauche une plage déclarée indisponible pour cet enseignant ce jour-là.
+    private static bool EstIndisponible(
+        Dictionary<Guid, List<(Jour jour, TimeOnly debut, TimeOnly fin)>> indispos,
+        Guid enseignantId, Jour jour, TimeOnly debut, TimeOnly fin)
+    {
+        if (!indispos.TryGetValue(enseignantId, out var liste)) return false;
+        return liste.Any(p => p.jour == jour && debut < p.fin && p.debut < fin);
+    }
+
     public async Task<EdtGenerationResult> GenerateAsync(Guid semestreId)
     {
         var semestre = await _db.Semestres.FindAsync(semestreId)
@@ -56,6 +95,7 @@ public class EdtGeneratorService : IEdtGeneratorService
             .ToListAsync();
 
         var salles = await _db.Salles.Where(s => s.Disponible).ToListAsync();
+        var indisponibilites = await ChargerIndisponibilitesAsync(semestreId);
 
         // Index des occupations en mémoire (rapide)
         var busyEnseignant = new HashSet<(Guid, Jour, TimeOnly)>();
@@ -91,6 +131,7 @@ public class EdtGeneratorService : IEdtGeneratorService
 
                     if (busyEnseignant.Contains((enseignant.Id, jour, debut))) continue;
                     if (busyGroupe.Contains((c.NiveauId, c.FiliereId, jour, debut))) continue;
+                    if (EstIndisponible(indisponibilites, enseignant.Id, jour, debut, fin)) continue;
 
                     var salle = sallesCompat.FirstOrDefault(s => !busySalle.Contains((s.Id, jour, debut)));
                     if (salle == null) continue;
@@ -166,6 +207,22 @@ public class EdtGeneratorService : IEdtGeneratorService
                 Description = $"{sa.Numero} occupée {g.Count()} fois {g.Key.Jour} {g.Key.HeureDebut:HH\\:mm}",
                 Date = DateTime.UtcNow
             });
+        }
+
+        // Nouveau : enseignant planifié sur un créneau qu'il a déclaré indisponible
+        var indisponibilites = await ChargerIndisponibilitesAsync(semestreId);
+        foreach (var s in slots)
+        {
+            if (EstIndisponible(indisponibilites, s.EnseignantId, s.Jour, s.HeureDebut, s.HeureFin))
+            {
+                conflits.Add(new ConflitDto
+                {
+                    Id = $"I-{s.Id}",
+                    Type = "Indisponibilite",
+                    Description = $"{s.Enseignant.Prenom[0]}. {s.Enseignant.Nom} planifié {s.Jour} {s.HeureDebut:HH\\:mm} alors que déclaré indisponible",
+                    Date = DateTime.UtcNow
+                });
+            }
         }
 
         return conflits;

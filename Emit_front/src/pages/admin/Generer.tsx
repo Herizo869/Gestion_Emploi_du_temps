@@ -1,31 +1,38 @@
-import { useState } from "react";
-import { Zap, CheckCircle2, RotateCw, Eye, Edit3 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Zap, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { useData } from "@/context/DataContext";
+import { apiGenererEdt, type GenerationEdtResult } from "@/lib/api";
 
 export default function AdminGenerer() {
-  const { semestres } = useData();
+  const { semestres, cours, enseignants, salles } = useData();
+  const [semestreId, setSemestreId] = useState("");
   const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<GenerationEdtResult | null>(null);
 
-  const launch = () => {
-    setDone(false);
+  // Sélectionne le premier semestre en brouillon par défaut
+  useEffect(() => {
+    if (!semestreId && semestres.length > 0) {
+      setSemestreId(semestres[0].id);
+    }
+  }, [semestres, semestreId]);
+
+  const launch = async () => {
+    if (!semestreId) return setError("Sélectionne un semestre.");
     setRunning(true);
-    setProgress(0);
-    const t = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          clearInterval(t);
-          setRunning(false);
-          setDone(true);
-          return 100;
-        }
-        return p + 10;
-      });
-    }, 200);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await apiGenererEdt(semestreId);
+      setResult(res);
+    } catch (e: any) {
+      setError(e.message ?? "Erreur lors de la génération");
+    } finally {
+      setRunning(false);
+    }
   };
 
   return (
@@ -37,17 +44,23 @@ export default function AdminGenerer() {
         <CardBody className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium">Semestre cible</label>
-            <select className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm sm:max-w-xs">
-              {semestres.map((s) => <option key={s.id}>{s.libelle} ({s.annee})</option>)}
+            <select
+              value={semestreId}
+              onChange={(e) => setSemestreId(e.target.value)}
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm sm:max-w-xs"
+            >
+              {semestres.length === 0 && <option value="">Aucun semestre</option>}
+              {semestres.map((s) => (
+                <option key={s.id} value={s.id}>{s.libelle} ({s.annee})</option>
+              ))}
             </select>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-3">
             {[
-              ["Cours à planifier", 67],
-              ["Enseignants", 24],
-              ["Salles disponibles", 17],
-              ["Créneaux", 30],
+              ["Cours", cours.length],
+              ["Enseignants", enseignants.length],
+              ["Salles", salles.length],
             ].map(([l, v]) => (
               <div key={String(l)} className="rounded-lg bg-slate-50 p-3">
                 <p className="text-xs uppercase text-slate-500">{l}</p>
@@ -56,63 +69,56 @@ export default function AdminGenerer() {
             ))}
           </div>
 
-          <Button leftIcon={<Zap className="h-4 w-4" />} disabled={running} onClick={launch}>
-            {running ? "Génération en cours..." : "Lancer la génération"}
-          </Button>
-
-          {(running || done) && (
-            <div>
-              <div className="mb-1 flex justify-between text-xs text-slate-500">
-                <span>Algorithme backtracking</span>
-                <span className="tabular-nums">{progress}%</span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                <div className="h-full bg-emit-blue transition-all" style={{ width: `${progress}%` }} />
-              </div>
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
             </div>
           )}
+
+          <Button leftIcon={<Zap className="h-4 w-4" />} disabled={running || !semestreId} onClick={launch}>
+            {running ? "Génération en cours..." : "Lancer la génération"}
+          </Button>
         </CardBody>
       </Card>
 
-      {done && (
+      {result && (
         <Card>
           <CardHeader title="Résultat" />
           <CardBody className="space-y-3">
             <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-              <CheckCircle2 className="h-4 w-4" /> Génération réussie en 1.8s — 65 / 67 cours planifiés, 2 conflits résolus.
+              <CheckCircle2 className="h-4 w-4" />
+              {result.slotsCrees} créneau{result.slotsCrees > 1 ? "x" : ""} créé{result.slotsCrees > 1 ? "s" : ""}
+              {result.conflits.length > 0 && ` — ${result.conflits.length} conflit${result.conflits.length > 1 ? "s" : ""} détecté${result.conflits.length > 1 ? "s" : ""}`}
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">Cours planifiés</p><p className="text-xl font-bold">65 / 67</p></div>
-              <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">Conflits résolus</p><p className="text-xl font-bold">2</p></div>
-              <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">Durée</p><p className="text-xl font-bold">1.8s</p></div>
-            </div>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <Button leftIcon={<Eye className="h-4 w-4" />}>Voir le planning</Button>
-              <Button variant="secondary" leftIcon={<Edit3 className="h-4 w-4" />}>Modifier manuellement</Button>
-              <Button variant="outline" leftIcon={<RotateCw className="h-4 w-4" />}>Régénérer</Button>
-            </div>
+
+            {result.coursNonPlanifies.length > 0 && (
+              <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-orange-700">
+                  <XCircle className="h-3.5 w-3.5" /> Cours non planifiés
+                </p>
+                <ul className="space-y-1 text-xs text-orange-700">
+                  {result.coursNonPlanifies.map((c, i) => <li key={i}>• {c}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {result.conflits.length > 0 && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-red-700">
+                  <AlertTriangle className="h-3.5 w-3.5" /> Conflits
+                </p>
+                <ul className="space-y-1 text-xs text-red-700">
+                  {result.conflits.map((c) => (
+                    <li key={c.id} className="flex items-center gap-2">
+                      <Badge tone="red">{c.type}</Badge> {c.description}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </CardBody>
         </Card>
       )}
-
-      <Card>
-        <CardHeader title="Historique des générations" />
-        <CardBody>
-          <ul className="space-y-2 text-sm">
-            {[
-              { d: "2025-05-15 11:08", r: "Succès", n: 2 },
-              { d: "2025-05-10 09:33", r: "Succès", n: 5 },
-              { d: "2025-05-08 17:45", r: "Échec", n: 0 },
-            ].map((x, i) => (
-              <li key={i} className="flex items-center justify-between border-b border-slate-100 pb-2 last:border-0">
-                <span className="text-slate-600 font-mono text-xs">{x.d}</span>
-                <Badge tone={x.r === "Succès" ? "green" : "red"}>{x.r}</Badge>
-                <span className="text-xs text-slate-500">{x.n} conflits</span>
-              </li>
-            ))}
-          </ul>
-        </CardBody>
-      </Card>
     </div>
   );
 }

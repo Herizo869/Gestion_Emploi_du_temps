@@ -14,7 +14,7 @@ public class NiveauxController : ControllerBase
     private readonly AppDbContext _db; private readonly IMapper _map;
     public NiveauxController(AppDbContext db, IMapper map) { _db = db; _map = map; }
 
-    [HttpGet]
+    [HttpGet, AllowAnonymous]
     public async Task<ActionResult<IEnumerable<NiveauDto>>> GetAll()
     {
         var list = await _db.Niveaux.Include(n => n.Filieres).ThenInclude(f => f.Cours).ToListAsync();
@@ -53,4 +53,16 @@ public class FilieresController : ControllerBase
         await _db.SaveChangesAsync();
         return Ok(_map.Map<FiliereDto>(f));
     }
+
+    [HttpDelete("{id:guid}"), Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var f = await _db.Filieres.FindAsync(id);
+        if (f is null) return NotFound();
+        _db.Filieres.Remove(f);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    
 }

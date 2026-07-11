@@ -10,4 +10,5 @@ public class Enseignant
     public StatutEnseignant Statut { get; set; }
     public ICollection<CoursEnseignant> Cours { get; set; } = new List<CoursEnseignant>();
     public ICollection<SlotEDT> Slots { get; set; } = new List<SlotEDT>();
+    public ICollection<Disponibilite> Disponibilites { get; set; } = new List<Disponibilite>();
 }

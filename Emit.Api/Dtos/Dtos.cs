@@ -12,6 +12,10 @@ public class EnseignantDto
     public string Specialite { get; set; } = "";
     public StatutEnseignant Statut { get; set; }
     public int NbCours { get; set; }
+    /// <summary>Total des heures disponibles cette semaine (depuis les disponibilités)</summary>
+    public double HeuresDisponibles { get; set; }
+    /// <summary>Total des heures planifiées dans l'EDT</summary>
+    public double HeuresPlanifiees { get; set; }
 }
 
 public class SalleDto
@@ -44,6 +48,7 @@ public class FiliereDto
     public Guid Id { get; set; }
     public string Libelle { get; set; } = "";
     public string Description { get; set; } = "";
+    public string Domaine { get; set; } = "";
     public int NbCours { get; set; }
 }
 
@@ -108,4 +113,20 @@ public class ConflitDto
     public string Type { get; set; } = ""; // "Enseignant" | "Salle"
     public string Description { get; set; } = "";
     public DateTime Date { get; set; }
+}
+
+public class SlotUpdateDto
+{
+    public Guid SalleId { get; set; }
+    public Guid EnseignantId { get; set; }
+    public Jour Jour { get; set; }
+    public string HeureDebut { get; set; } = ""; // format "HH:mm", ex "07:30"
+    public string HeureFin { get; set; } = "";   // format "HH:mm", ex "09:00"
+}
+
+public class SlotConflitResponse
+{
+    public string Message { get; set; } = "";
+    public List<ConflitDto> Conflits { get; set; } = new();
+    public List<string> SallesLibres { get; set; } = new();
 }
