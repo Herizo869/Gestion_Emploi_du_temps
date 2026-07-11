@@ -22,7 +22,7 @@ export default function EnsCours() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
-                  <th className="py-2.5 pr-3">Intitulé</th>
+                  <th className="py-2.5 pr-3">Matière</th>
                   <th className="py-2.5 pr-3">Niveau</th>
                   <th className="py-2.5 pr-3">Filière</th>
                   <th className="py-2.5 pr-3">Type</th>

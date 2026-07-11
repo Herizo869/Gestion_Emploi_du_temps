@@ -18,6 +18,19 @@ public class RegisterDto
     public Guid? EnseignantId { get; set; }
 }
 
+public class UpdateProfileDto
+{
+    [Required] public string Prenom { get; set; } = null!;
+    [Required] public string Nom { get; set; } = null!;
+    [Required, EmailAddress] public string Email { get; set; } = null!;
+}
+
+public class ChangePasswordDto
+{
+    [Required, MinLength(6)] public string CurrentPassword { get; set; } = null!;
+    [Required, MinLength(6)] public string NewPassword { get; set; } = null!;
+}
+
 public class AuthResponseDto
 {
     public string Token { get; set; } = null!;

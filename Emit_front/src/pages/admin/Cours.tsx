@@ -124,7 +124,7 @@ export default function AdminCours() {
   };
 
   const handleSave = async () => {
-    if (!form.intitule) return setError("L'intitulé est requis");
+    if (!form.intitule) return setError("La matière est requise");
     if (!form.niveauId) return setError("Le niveau est requis");
     if (!form.filiereId) return setError("La filière est requise");
     setSaving(true); setError(null);
@@ -249,7 +249,7 @@ export default function AdminCours() {
                 className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm"
                 value={sortBy} onChange={e => setSortBy(e.target.value as SortKey)}
               >
-                <option value="intitule">Tri : Intitulé</option>
+                <option value="intitule">Tri : Matière</option>
                 <option value="volume-desc">Volume ↓</option>
                 <option value="volume-asc">Volume ↑</option>
                 <option value="progression">Progression</option>
@@ -301,7 +301,7 @@ export default function AdminCours() {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-slate-600">
                           <Clock className="inline h-3.5 w-3.5 mr-1" />
-                          Volume horaire
+                          Charge horaire
                         </span>
                         <span className="font-semibold">{c.volumeHoraire}h</span>
                       </div>
@@ -371,12 +371,12 @@ export default function AdminCours() {
         )}
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            label="Intitulé" placeholder="Algorithmique"
+            label="Matière" placeholder="Algorithmique"
             value={form.intitule}
             onChange={e => setForm(p => ({ ...p, intitule: e.target.value }))}
           />
           <Input
-            label="Volume horaire (h)" type="number" placeholder="24"
+            label="Charge horaire (h)" type="number" placeholder="24"
             value={String(form.volumeHoraire)}
             onChange={e => setForm(p => ({ ...p, volumeHoraire: Number(e.target.value) }))}
           />

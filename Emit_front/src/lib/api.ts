@@ -46,6 +46,13 @@ export const apiLogin = (email: string, password: string) =>
     body: JSON.stringify({ email, password }),
   });
 export const apiMe = () => request<User>("/api/auth/me");
+export const apiUpdateProfile = (data: { prenom: string; nom: string; email: string }) =>
+  request<User>("/api/auth/me", { method: "PUT", body: JSON.stringify(data) });
+export const apiChangePassword = (currentPassword: string, newPassword: string) =>
+  request<{ message: string }>("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
 
 // ───── Enseignants ─────────────────────────────────────────
 export const apiEnseignants = () => request<Enseignant[]>("/api/enseignants");

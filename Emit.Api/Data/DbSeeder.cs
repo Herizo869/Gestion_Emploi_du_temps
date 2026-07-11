@@ -301,6 +301,76 @@ public static class DbSeeder
             });
         }
 
+        // ══════════════════════════════════════════════════
+        // NOTIFICATIONS (scénarios variés)
+        // ══════════════════════════════════════════════════
+        var now = DateTime.UtcNow;
+
+        // Récupérer les User créés (admin + enseignants)
+        var adminUser = db.Users.Local.First(u => u.Role == Role.Admin);
+        // Map enseignant → user (les users sont dans l'ordre des enseignants)
+        var userByEns = new Dictionary<Enseignant, User>();
+        foreach (var ens in enseignantsList)
+        {
+            var u = db.Users.Local.First(u2 => u2.EnseignantId == ens.Id);
+            userByEns[ens] = u;
+        }
+
+        // Notifications pour Herizo RAKOTO (e1)
+        db.Notifications.AddRange(
+            new Notification
+            {
+                User = userByEns[e1], Type = NotifType.Planning,
+                Titre = "Emploi du temps publié",
+                Description = "L'EDT du Semestre 1 (2024-2025) a été publié. Vous pouvez consulter vos créneaux.",
+                DateCreation = now.AddDays(-2), Lu = false
+            },
+            new Notification
+            {
+                User = userByEns[e1], Type = NotifType.Cours,
+                Titre = "Cours assigné : Génie Logiciel",
+                Description = "Vous avez été assigné au cours Génie Logiciel — 30h — L3 CIGSI. Vérifiez votre charge horaire.",
+                DateCreation = now.AddDays(-5), Lu = true
+            },
+            new Notification
+            {
+                User = userByEns[e1], Type = NotifType.Systeme,
+                Titre = "Conflit détecté",
+                Description = "Un conflit d'emploi du temps a été détecté le Lundi à 07h30 : salle AMPHI-1 déjà occupée.",
+                DateCreation = now.AddDays(-1), Lu = false
+            }
+        );
+
+        // Notifications pour Miaro RABE (e2)
+        db.Notifications.AddRange(
+            new Notification
+            {
+                User = userByEns[e2], Type = NotifType.Cours,
+                Titre = "Planning mis à jour",
+                Description = "Votre créneau du Mardi 08h00-10h00 a été déplacé en salle A102 (anciennement B201).",
+                DateCreation = now.AddDays(-3), Lu = true
+            },
+            new Notification
+            {
+                User = userByEns[e2], Type = NotifType.Systeme,
+                Titre = "Disponibilité requise",
+                Description = "Merci de renseigner vos disponibilités pour le Semestre 2 avant le 15 juillet.",
+                DateCreation = now.AddDays(-7), Lu = false
+            }
+        );
+
+        // Notifications de bienvenue pour tous les enseignants
+        foreach (var ens in enseignantsList)
+        {
+            db.Notifications.Add(new Notification
+            {
+                User = userByEns[ens], Type = NotifType.Systeme,
+                Titre = "Bienvenue sur EMIT EDT",
+                Description = "Le nouveau système de gestion des emplois du temps est en ligne. N'oubliez pas de mettre à jour vos disponibilités.",
+                DateCreation = now.AddDays(-10), Lu = false
+            });
+        }
+
         await db.SaveChangesAsync();
     }
 }
