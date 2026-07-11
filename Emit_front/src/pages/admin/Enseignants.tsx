@@ -10,7 +10,14 @@ import { useData } from "@/context/DataContext";
 import { apiCreateEnseignant, apiUpdateEnseignant, apiDeleteEnseignant } from "@/lib/api";
 import type { Enseignant } from "@/types";
 
-const statutTone = { permanent: "green", vacataire: "orange", invite: "purple" } as const;
+const statutTone = {
+  permanent: "green",
+  Permanent: "green",
+  vacataire: "orange",
+  Vacataire: "orange",
+  invite: "purple",
+  Invite: "purple",
+} as const;
 const empty: Omit<Enseignant, "id"> = {
   prenom: "",
   nom: "",
@@ -223,7 +230,7 @@ export default function AdminEnseignants() {
                           </div>
                           <span
                             className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white ${
-                              e.statut === "permanent" ? "bg-green-500" : e.statut === "vacataire" ? "bg-orange-400" : "bg-purple-400"
+                              e.statut.toLowerCase() === "permanent" ? "bg-green-500" : e.statut.toLowerCase() === "vacataire" ? "bg-orange-400" : "bg-purple-400"
                             }`}
                           />
                         </div>
@@ -325,7 +332,7 @@ export default function AdminEnseignants() {
                     {/* ── Footer ── */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
                       <Badge tone={statutTone[e.statut]}>
-                        {e.statut === "permanent" ? "Permanent" : e.statut === "vacataire" ? "Vacataire" : "Invité"}
+                        {e.statut.toLowerCase() === "permanent" ? "Permanent" : e.statut.toLowerCase() === "vacataire" ? "Vacataire" : "Invité"}
                       </Badge>
                       <button
                         onClick={() => navigate(`/admin/disponibilites?enseignant=${e.id}`)}

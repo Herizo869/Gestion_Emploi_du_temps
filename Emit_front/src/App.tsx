@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import AdminLayout from "./layouts/AdminLayout";
 import EnseignantLayout from "./layouts/EnseignantLayout";
@@ -28,7 +29,7 @@ import NotFound from "./pages/NotFound";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/edt" replace />} />
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/edt" element={<PublicEdt />} />
 
