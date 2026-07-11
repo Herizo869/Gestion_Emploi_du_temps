@@ -14,7 +14,7 @@ public class SemestresController : ControllerBase
     private readonly AppDbContext _db; private readonly IMapper _map;
     public SemestresController(AppDbContext db, IMapper map) { _db = db; _map = map; }
 
-    [HttpGet]
+    [HttpGet, AllowAnonymous]
     public async Task<ActionResult<IEnumerable<SemestreDto>>> GetAll()
         => Ok(_map.Map<List<SemestreDto>>(await _db.Semestres.ToListAsync()));
 

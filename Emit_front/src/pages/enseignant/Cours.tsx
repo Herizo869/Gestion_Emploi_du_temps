@@ -37,8 +37,8 @@ export default function EnsCours() {
                   return (
                     <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer">
                       <td className="py-3 pr-3 font-medium">{c.intitule}</td>
-                      <td className="py-3 pr-3">{c.niveau}</td>
-                      <td className="py-3 pr-3">{c.filiere}</td>
+                      <td className="py-3 pr-3">{c.niveauLibelle}</td>
+                      <td className="py-3 pr-3">{c.filiereLibelle}</td>
                       <td className="py-3 pr-3"><Badge tone={typeTone[c.type]}>{c.type}</Badge></td>
                       <td className="py-3 pr-3 tabular-nums">{c.volumeHoraire}h</td>
                       <td className="py-3 pr-3 min-w-[160px]">

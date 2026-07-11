@@ -23,12 +23,12 @@ export default function EnsDashboard() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="grid h-14 w-14 place-items-center rounded-full bg-emit-navy text-base font-bold text-white">
-                {user?.prenom[0]}{user?.nom[0]}
+                {(user?.full_name ?? user?.email ?? "?").split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()}
               </div>
               <div>
-                <h1 className="text-xl font-bold">Bonjour {user?.prenom} {user?.nom}</h1>
+                <h1 className="text-xl font-bold">Bonjour {user?.full_name?.split(" ")[0] ?? user?.email?.split("@")[0]}</h1>
                 <p className="text-sm text-slate-500">
-                  {user?.specialite} · <Badge tone="green">{user?.statut}</Badge>
+                  {user?.specialite ?? "Enseignant"} · <Badge tone="green">{user?.statut ?? "actif"}</Badge>
                 </p>
               </div>
             </div>
@@ -70,7 +70,7 @@ export default function EnsDashboard() {
                 <li key={c.id} className="flex items-center justify-between py-2.5">
                   <div>
                     <p className="text-sm font-medium">{c.intitule}</p>
-                    <p className="text-xs text-slate-500">{c.niveau} · {c.filiere}</p>
+                    <p className="text-xs text-slate-500">{c.niveauId} · {c.filiereId}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge tone={typeTone[c.type]}>{c.type}</Badge>

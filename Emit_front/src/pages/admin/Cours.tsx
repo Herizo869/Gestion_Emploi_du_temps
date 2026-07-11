@@ -12,7 +12,7 @@ import type { Cours } from "@/types";
 const typeTone = { CM: "navy", TD: "sky", TP: "green" } as const;
 
 interface CoursForm {
-  intitule: string; type: string; volumeHoraire: number;
+  intitule: string; type: import("@/types").CoursType; volumeHoraire: number;
   niveauId: string; filiereId: string; enseignantIds: string[];
 }
 const empty: CoursForm = {
@@ -241,7 +241,7 @@ export default function AdminCours() {
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
             <select
               value={form.type}
-              onChange={e => setForm(p => ({ ...p, type: e.target.value }))}
+              onChange={e => setForm(p => ({ ...p, type: e.target.value as import("@/types").CoursType }))}
               className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
             >
               <option>CM</option><option>TD</option><option>TP</option>

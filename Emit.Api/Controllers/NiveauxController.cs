@@ -14,7 +14,7 @@ public class NiveauxController : ControllerBase
     private readonly AppDbContext _db; private readonly IMapper _map;
     public NiveauxController(AppDbContext db, IMapper map) { _db = db; _map = map; }
 
-    [HttpGet]
+    [HttpGet, AllowAnonymous]
     public async Task<ActionResult<IEnumerable<NiveauDto>>> GetAll()
     {
         var list = await _db.Niveaux.Include(n => n.Filieres).ThenInclude(f => f.Cours).ToListAsync();
