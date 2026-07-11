@@ -208,10 +208,11 @@ export default function AdminEnseignants() {
                 return (
                   <div
                     key={e.id}
-                    className={`group rounded-xl border bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-200 ${
+                    onClick={() => navigate(`/admin/disponibilites?enseignant=${e.id}`)}
+                    className={`group rounded-xl border bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer ${
                       isOverloaded
                         ? "border-red-200 hover:border-red-300"
-                        : "border-slate-200 hover:border-emit-sky/40"
+                        : "border-slate-200 hover:border-emit-sky/40 hover:-translate-y-0.5"
                     }`}
                   >
                     {/* ── Header : avatar + actions ── */}
@@ -236,12 +237,12 @@ export default function AdminEnseignants() {
                         <button
                           className="rounded-lg p-2 hover:bg-slate-100 transition-colors"
                           title="Modifier"
-                          onClick={() => openEdit(e)}
+                          onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}
                         >
                           <Edit2 className="h-4 w-4 text-slate-500" />
                         </button>
                         <button
-                          onClick={() => setConfirm(e)}
+                          onClick={(ev) => { ev.stopPropagation(); setConfirm(e); }}
                           className="rounded-lg p-2 hover:bg-red-50 transition-colors"
                           title="Supprimer"
                         >

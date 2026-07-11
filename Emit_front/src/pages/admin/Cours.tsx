@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Edit2, Trash2, AlertTriangle, Search, BookOpen, Clock, TrendingUp, Layers, Users, BarChart3 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -34,6 +35,7 @@ function progressionColor(pct: number): string {
 }
 
 export default function AdminCours() {
+  const navigate = useNavigate();
   const { cours, enseignants, niveaux, refresh } = useData();
   const [filterNiveau, setFilterNiveau] = useState("");
   const [filterFiliere, setFilterFiliere] = useState("");
@@ -272,7 +274,8 @@ export default function AdminCours() {
                 return (
                   <div
                     key={c.id}
-                    className="group rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm hover:shadow-md transition-all duration-200"
+                    onClick={() => navigate(`/admin/edt`)}
+                    className="group rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between mb-3">
@@ -287,10 +290,10 @@ export default function AdminCours() {
                         </div>
                       </div>
                       <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="rounded p-2 hover:bg-slate-200 transition-colors" title="Modifier" onClick={() => openEdit(c)}>
+                        <button className="rounded p-2 hover:bg-slate-200 transition-colors" title="Modifier" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
                           <Edit2 className="h-4 w-4 text-slate-600" />
                         </button>
-                        <button className="rounded p-2 hover:bg-red-100 transition-colors" title="Supprimer" onClick={() => setConfirm(c)}>
+                        <button className="rounded p-2 hover:bg-red-100 transition-colors" title="Supprimer" onClick={(e) => { e.stopPropagation(); setConfirm(c); }}>
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </button>
                       </div>
