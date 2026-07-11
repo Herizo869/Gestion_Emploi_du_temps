@@ -7,7 +7,7 @@ export interface User {
   email: string;
   role: Role;
   specialite?: string;
-  statut?: "permanent" | "vacataire" | "invite";
+  statut?: "Permanent" | "Vacataire" | "Invite";
 }
 
 export type CoursType = "CM" | "TD" | "TP";
@@ -18,7 +18,7 @@ export interface Enseignant {
   nom: string;
   email: string;
   specialite: string;
-  statut: "permanent" | "vacataire" | "invite";
+  statut: "Permanent" | "Vacataire" | "Invite";
   nbCours: number;
 }
 
@@ -52,6 +52,7 @@ export interface Filiere {
   domaine?: string;
   nbCours: number;
 }
+
 export interface Niveau {
   id: string;
   libelle: "L1" | "L2" | "L3" | "M1" | "M2";
@@ -81,9 +82,7 @@ export interface SlotEDT {
   coursId: string;
   intitule: string;
   type: CoursType;
-  enseignantId: string;
   enseignant: string;
-  salleId: string;
   salle: string;
   niveau: string;
   filiere: string;

@@ -249,6 +249,8 @@ export const journal: LogEntry[] = [
   { id: "l5", date: "2025-05-12 18:00", utilisateur: "Admin", action: "Suppression", entite: "Salle B203" },
 ];
 
+
+
 export const conflits = [
   { id: "k1", type: "Enseignant", description: "H. RAKOTO planifié deux fois Mardi 09h15", date: "Aujourd'hui 10:24" },
   { id: "k2", type: "Salle", description: "AMPHI-1 occupée par deux groupes Lundi 07h30", date: "Hier 17:02" },

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Edit2, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertTriangle, Search, BookOpen, Clock, TrendingUp, Layers, Users, BarChart3 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -7,12 +7,18 @@ import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import { useData } from "@/context/DataContext";
 import { apiCreateCours, apiUpdateCours, apiDeleteCours } from "@/lib/api";
-import type { Cours } from "@/types";
+import type { Cours, CoursType } from "@/types";
 
-const typeTone = { CM: "navy", TD: "sky", TP: "green" } as const;
+const TYPE_CONFIG = {
+  CM: { tone: "navy" as const, icon: "📖" },
+  TD: { tone: "sky" as const, icon: "✏️" },
+  TP: { tone: "green" as const, icon: "💻" },
+} as const;
+
+type SortKey = "intitule" | "volume-desc" | "volume-asc" | "progression" | "type";
 
 interface CoursForm {
-  intitule: string; type: import("@/types").CoursType; volumeHoraire: number;
+  intitule: string; type: CoursType; volumeHoraire: number;
   niveauId: string; filiereId: string; enseignantIds: string[];
 }
 const empty: CoursForm = {
@@ -20,11 +26,20 @@ const empty: CoursForm = {
   niveauId: "", filiereId: "", enseignantIds: [],
 };
 
+function progressionColor(pct: number): string {
+  if (pct === 0) return "bg-red-500";
+  if (pct < 25) return "bg-orange-500";
+  if (pct < 75) return "bg-yellow-500";
+  return "bg-emit-blue";
+}
+
 export default function AdminCours() {
   const { cours, enseignants, niveaux, refresh } = useData();
   const [filterNiveau, setFilterNiveau] = useState("");
   const [filterFiliere, setFilterFiliere] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortKey>("intitule");
   const [open, setOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Cours | null>(null);
   const [confirm, setConfirm] = useState<Cours | null>(null);
@@ -44,12 +59,39 @@ export default function AdminCours() {
     [niveaux]
   );
 
-  const filtered = useMemo(() =>
-    cours.filter(c =>
+  // Statistiques
+  const stats = useMemo(() => {
+    const total = cours.length;
+    const volumeTotal = cours.reduce((a, c) => a + c.volumeHoraire, 0);
+    const heuresPlanifiees = cours.reduce((a, c) => a + c.heuresPlanifiees, 0);
+    const progressionMoyenne = volumeTotal > 0 ? Math.round((heuresPlanifiees / volumeTotal) * 100) : 0;
+    return { total, volumeTotal, heuresPlanifiees, progressionMoyenne };
+  }, [cours]);
+
+  // Filtrage + tri
+  const filtered = useMemo(() => {
+    let result = cours.filter(c =>
+      (!search || c.intitule.toLowerCase().includes(search.toLowerCase())) &&
       (!filterNiveau || c.niveauLibelle === filterNiveau) &&
       (!filterFiliere || c.filiereLibelle === filterFiliere) &&
       (!filterType || c.type === filterType)
-    ), [cours, filterNiveau, filterFiliere, filterType]);
+    );
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case "intitule": return a.intitule.localeCompare(b.intitule);
+        case "volume-desc": return b.volumeHoraire - a.volumeHoraire;
+        case "volume-asc": return a.volumeHoraire - b.volumeHoraire;
+        case "progression": {
+          const pA = a.volumeHoraire > 0 ? a.heuresPlanifiees / a.volumeHoraire : 0;
+          const pB = b.volumeHoraire > 0 ? b.heuresPlanifiees / b.volumeHoraire : 0;
+          return pA - pB;
+        }
+        case "type": return a.type.localeCompare(b.type);
+        default: return 0;
+      }
+    });
+    return result;
+  }, [cours, search, filterNiveau, filterFiliere, filterType, sortBy]);
 
   const openAdd = () => {
     setEditTarget(null);
@@ -118,10 +160,68 @@ export default function AdminCours() {
         <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openAdd}>Ajouter un cours</Button>
       </div>
 
+      {/* Statistiques */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-blue-50 p-2.5">
+              <BookOpen className="h-5 w-5 text-emit-blue" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
+              <p className="text-xs text-slate-500">Total cours</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-purple-50 p-2.5">
+              <Clock className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{stats.volumeTotal}h</p>
+              <p className="text-xs text-slate-500">Volume total</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-green-50 p-2.5">
+              <BarChart3 className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{stats.heuresPlanifiees}h</p>
+              <p className="text-xs text-slate-500">Heures planifiées</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-orange-50 p-2.5">
+              <TrendingUp className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{stats.progressionMoyenne}%</p>
+              <p className="text-xs text-slate-500">Progression moyenne</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardBody>
-          {/* Filtres */}
-          <div className="mb-4 grid gap-3 sm:grid-cols-3">
+          {/* Filtres et tri */}
+          <div className="mb-4 grid gap-3 sm:grid-cols-5">
+            <div className="relative sm:col-span-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-emit-blue focus:outline-none focus:ring-1 focus:ring-emit-blue"
+              />
+            </div>
             <select
               className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
               value={filterNiveau} onChange={e => setFilterNiveau(e.target.value)}
@@ -143,69 +243,112 @@ export default function AdminCours() {
               <option value="">Tous types</option>
               <option>CM</option><option>TD</option><option>TP</option>
             </select>
+            <div className="relative">
+              <Layers className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <select
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm"
+                value={sortBy} onChange={e => setSortBy(e.target.value as SortKey)}
+              >
+                <option value="intitule">Tri : Intitulé</option>
+                <option value="volume-desc">Volume ↓</option>
+                <option value="volume-asc">Volume ↑</option>
+                <option value="progression">Progression</option>
+                <option value="type">Type</option>
+              </select>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
-                  <th className="py-2.5 pr-3">Intitulé</th>
-                  <th className="py-2.5 pr-3">Type</th>
-                  <th className="py-2.5 pr-3">Volume</th>
-                  <th className="py-2.5 pr-3">Avancement</th>
-                  <th className="py-2.5 pr-3">Niveau</th>
-                  <th className="py-2.5 pr-3">Filière</th>
-                  <th className="py-2.5 pr-3">Enseignants</th>
-                  <th className="py-2.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr><td colSpan={8} className="py-8 text-center text-slate-400">Aucun cours</td></tr>
-                )}
-                {filtered.map((c) => {
-                  const pct = c.volumeHoraire > 0 ? (c.heuresPlanifiees / c.volumeHoraire) * 100 : 0;
-                  return (
-                    <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="py-3 pr-3 font-medium text-slate-800">{c.intitule}</td>
-                      <td className="py-3 pr-3"><Badge tone={typeTone[c.type]}>{c.type}</Badge></td>
-                      <td className="py-3 pr-3 tabular-nums">{c.volumeHoraire}h</td>
-                      <td className="py-3 pr-3 min-w-[160px]">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <AlertTriangle className="h-12 w-12 text-slate-300 mb-3" />
+              <p className="text-center text-slate-400">Aucun cours ne correspond à vos critères</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((c) => {
+                const cfg = TYPE_CONFIG[c.type];
+                const pct = c.volumeHoraire > 0 ? (c.heuresPlanifiees / c.volumeHoraire) * 100 : 0;
+                const restantes = c.volumeHoraire - c.heuresPlanifiees;
+                return (
+                  <div
+                    key={c.id}
+                    className="group rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm hover:shadow-md transition-all duration-200"
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                            <div className={`h-full ${pct === 0 ? "bg-red-500" : "bg-emit-blue"}`} style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-xs tabular-nums text-slate-500">{c.heuresPlanifiees}h/{c.volumeHoraire}h</span>
+                          <span className="text-lg">{cfg.icon}</span>
+                          <h3 className="font-semibold text-slate-800 truncate">{c.intitule}</h3>
                         </div>
-                      </td>
-                      <td className="py-3 pr-3">{c.niveauLibelle}</td>
-                      <td className="py-3 pr-3">{c.filiereLibelle}</td>
-                      <td className="py-3 pr-3">
-                        {c.enseignantIds.length === 0
-                          ? <span className="text-slate-400">—</span>
-                          : enseignants
-                              .filter(e => c.enseignantIds.includes(e.id))
-                              .map(e => `${e.prenom[0]}. ${e.nom}`)
-                              .join(", ")
-                        }
-                      </td>
-                      <td className="py-3 text-right">
-                        <div className="inline-flex gap-1">
-                          <button className="rounded p-1.5 hover:bg-slate-200" title="Modifier" onClick={() => openEdit(c)}>
-                            <Edit2 className="h-4 w-4 text-slate-500" />
-                          </button>
-                          <button className="rounded p-1.5 hover:bg-red-100" title="Supprimer" onClick={() => setConfirm(c)}>
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </button>
+                        <div className="flex gap-1.5 mt-2">
+                          <Badge tone={cfg.tone}>{c.type}</Badge>
+                          <Badge tone="gray">{c.niveauLibelle} • {c.filiereLibelle}</Badge>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-2 text-xs text-slate-500">{filtered.length} résultat(s)</div>
+                      </div>
+                      <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="rounded p-2 hover:bg-slate-200 transition-colors" title="Modifier" onClick={() => openEdit(c)}>
+                          <Edit2 className="h-4 w-4 text-slate-600" />
+                        </button>
+                        <button className="rounded p-2 hover:bg-red-100 transition-colors" title="Supprimer" onClick={() => setConfirm(c)}>
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Volume et avancement */}
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-600">
+                          <Clock className="inline h-3.5 w-3.5 mr-1" />
+                          Volume horaire
+                        </span>
+                        <span className="font-semibold">{c.volumeHoraire}h</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className={`h-full transition-all duration-500 rounded-full ${progressionColor(pct)}`}
+                            style={{ width: `${Math.min(pct, 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">
+                            {c.heuresPlanifiees}h planifiées
+                          </span>
+                          <span className={`font-medium ${restantes > 0 ? "text-slate-600" : "text-green-600"}`}>
+                            {restantes > 0 ? `${restantes}h restantes` : "✅ Complet"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Enseignants */}
+                    <div className="pt-3 border-t border-slate-100">
+                      <p className="text-xs font-medium text-slate-600 mb-1.5 flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        Enseignants
+                      </p>
+                      {c.enseignantIds.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic">Non assignés</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {enseignants
+                            .filter(e => c.enseignantIds.includes(e.id))
+                            .map(e => (
+                              <Badge key={e.id} tone="sky">
+                                {e.prenom[0]}. {e.nom}
+                              </Badge>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="mt-3 text-xs text-slate-500">{filtered.length} résultat(s)</div>
         </CardBody>
       </Card>
 
@@ -241,7 +384,11 @@ export default function AdminCours() {
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
             <select
               value={form.type}
+<<<<<<< HEAD
               onChange={e => setForm(p => ({ ...p, type: e.target.value as import("@/types").CoursType }))}
+=======
+              onChange={e => setForm(p => ({ ...p, type: e.target.value as CoursType }))}
+>>>>>>> d0ac8a57633f9859e9b7c68497a93c65a2e5dbf2
               className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
             >
               <option>CM</option><option>TD</option><option>TP</option>
@@ -304,10 +451,18 @@ export default function AdminCours() {
         }
       >
         <div className="flex items-start gap-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" />
-          <p className="text-sm text-slate-700">
-            Supprimer <strong>{confirm?.intitule}</strong> ? Cette action est irréversible.
-          </p>
+          <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500 shrink-0" />
+          <div>
+            <p className="text-sm text-slate-700">
+              Supprimer <strong>{confirm?.intitule}</strong> ?
+            </p>
+            {confirm && confirm.heuresPlanifiees > 0 && (
+              <p className="mt-1 text-xs text-orange-600">
+                ⚠️ Ce cours a {confirm.heuresPlanifiees}h déjà planifiées dans l'EDT — la suppression peut affecter le planning.
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-400">Cette action est irréversible.</p>
+          </div>
         </div>
       </Modal>
     </div>
