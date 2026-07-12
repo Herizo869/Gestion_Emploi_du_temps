@@ -7,6 +7,10 @@ public class Disponibilite
     public Enseignant Enseignant { get; set; } = null!;
     public Guid SemestreId { get; set; }
     public Semestre Semestre { get; set; } = null!;
+    public Guid CoursId { get; set; }
+    public Cours Cours { get; set; } = null!;
+    public Guid NiveauId { get; set; }
+    public Niveau Niveau { get; set; } = null!;
     public string Jour { get; set; } = "";
     public string Creneau { get; set; } = "";
     public bool EstDisponible { get; set; }

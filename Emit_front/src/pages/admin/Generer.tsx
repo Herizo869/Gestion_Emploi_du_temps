@@ -97,7 +97,7 @@ export default function AdminGenerer() {
                   <XCircle className="h-3.5 w-3.5" /> Cours non planifiés
                 </p>
                 <ul className="space-y-1 text-xs text-orange-700">
-                  {result.coursNonPlanifies.map((c, i) => <li key={i}>• {c}</li>)}
+                  {result.coursNonPlanifies.map((c: string, i: number) => <li key={i}>• {c}</li>)}
                 </ul>
               </div>
             )}
@@ -108,7 +108,7 @@ export default function AdminGenerer() {
                   <AlertTriangle className="h-3.5 w-3.5" /> Conflits
                 </p>
                 <ul className="space-y-1 text-xs text-red-700">
-                  {result.conflits.map((c) => (
+                  {result.conflits.map((c: any) => (
                     <li key={c.id} className="flex items-center gap-2">
                       <Badge tone="red">{c.type}</Badge> {c.description}
                     </li>

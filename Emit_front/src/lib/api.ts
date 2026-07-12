@@ -1,7 +1,9 @@
 import type {
   Enseignant, Salle, Cours, Niveau, Filiere, Semestre,
-  SlotEDT, Notif, LogEntry, User,
+  SlotEDT, Notif, LogEntry, User, GenerationEdtResult,
 } from "@/types";
+
+export type { GenerationEdtResult };
 
 const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "https://localhost:5001").replace(/\/$/, "");
 const TOKEN_KEY = "emit-token";
@@ -76,6 +78,7 @@ export const apiDeleteFiliere = (id: string) =>
 
 // ───── Cours ───────────────────────────────────────────────
 export const apiCours = () => request<Cours[]>("/api/cours");
+export const apiCoursMine = () => request<Cours[]>("/api/cours/me");
 export const apiCreateCours = (c: Partial<Cours>) =>
   request<Cours>("/api/cours", { method: "POST", body: JSON.stringify(c) });
 export const apiUpdateCours = (id: string, c: Partial<Cours>) =>
@@ -258,13 +261,24 @@ export interface Dispo {
   estDisponible: boolean;
   estIndisponible: boolean;
 }
-export const apiMyDispos = (semestreId: string) => request<Dispo[]>(`/api/disponibilites/me?semestreId=${semestreId}`);
-export const apiSaveMyDispos = (semestreId: string, dispos: Dispo[]) =>
-  request<void>(`/api/disponibilites/me?semestreId=${semestreId}`, { method: "PUT", body: JSON.stringify(dispos) });
-export const apiDisposEnseignant = (enseignantId: string, semestreId: string) =>
-  request<Dispo[]>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}`);
-export const apiSaveDisponibilites = (enseignantId: string, semestreId: string, disponibilites: Dispo[]) =>
-  request<void>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}`, { method: "PUT", body: JSON.stringify(disponibilites) });
+export interface ConflitDispo {
+  jour: string;
+  creneau: string;
+  cours1: string;
+  cours2: string;
+}
+export const apiMyDispos = (semestreId: string, coursId: string) =>
+  request<Dispo[]>(`/api/disponibilites/me?semestreId=${semestreId}&coursId=${coursId}`);
+export const apiSaveMyDispos = (semestreId: string, coursId: string, dispos: Dispo[]) =>
+  request<{ conflits: ConflitDispo[] }>(`/api/disponibilites/me?semestreId=${semestreId}&coursId=${coursId}`, { method: "PUT", body: JSON.stringify(dispos) });
+export const apiMesConflitsDispos = (semestreId: string) =>
+  request<ConflitDispo[]>(`/api/disponibilites/mes-conflits?semestreId=${semestreId}`);
+export const apiDisposEnseignant = (enseignantId: string, semestreId: string, coursId: string) =>
+  request<Dispo[]>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}&coursId=${coursId}`);
+export const apiSaveDisponibilites = (enseignantId: string, semestreId: string, coursId: string, disponibilites: Dispo[]) =>
+  request<{ conflits: ConflitDispo[] }>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}&coursId=${coursId}`, { method: "PUT", body: JSON.stringify(disponibilites) });
+export const apiConflitsDispos = (enseignantId: string, semestreId: string) =>
+  request<ConflitDispo[]>(`/api/disponibilites/conflits?semestreId=${semestreId}&enseignantId=${enseignantId}`);
 
 // ───── Export ──────────────────────────────────────────────
 export interface ExportParams {

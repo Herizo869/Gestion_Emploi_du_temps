@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { Save, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react";
+import { Save, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock, BookOpen } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { apiMyDispos, apiSaveMyDispos } from "@/lib/api";
+import Badge from "@/components/ui/Badge";
+import { apiMyDispos, apiSaveMyDispos, apiCoursMine, type ConflitDispo } from "@/lib/api";
 import { useData } from "@/context/DataContext";
+import type { Cours } from "@/types";
 
 const CRENEAUX = [
   "07h00 - 08h00", "08h00 - 09h00", "09h00 - 10h00", "10h00 - 11h00", "11h00 - 12h00",
@@ -17,7 +19,9 @@ type State = "dispo" | "indispo" | "vide";
 
 export default function EnsDisponibilites() {
   const { semestres } = useData();
+  const [mesCours, setMesCours] = useState<Cours[]>([]);
   const [semestreId, setSemestreId] = useState<string>("");
+  const [coursId, setCoursId] = useState<string>("");
   const [grid, setGrid] = useState<State[][]>(
     () => Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State))
   );
@@ -26,8 +30,10 @@ export default function EnsDisponibilites() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [changed, setChanged] = useState(false);
+  const [conflits, setConflits] = useState<ConflitDispo[]>([]);
 
-  // Sélectionne automatiquement le semestre publié le plus récent, sinon le dernier de la liste
+  useEffect(() => { apiCoursMine().then(setMesCours).catch(() => {}); }, []);
+
   useEffect(() => {
     if (semestres.length > 0 && !semestreId) {
       const publie = [...semestres].reverse().find(s => s.statut === "publie");
@@ -36,9 +42,13 @@ export default function EnsDisponibilites() {
   }, [semestres, semestreId]);
 
   useEffect(() => {
-    if (!semestreId) return;
+    if (mesCours.length > 0 && !coursId) setCoursId(mesCours[0].id);
+  }, [mesCours, coursId]);
+
+  useEffect(() => {
+    if (!semestreId || !coursId) return;
     setLoading(true);
-    apiMyDispos(semestreId)
+    apiMyDispos(semestreId, coursId)
       .then(dispos => {
         const newGrid = Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State));
         dispos.forEach(d => {
@@ -53,7 +63,7 @@ export default function EnsDisponibilites() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [semestreId]);
+  }, [semestreId, coursId]);
 
   const toggle = (r: number, c: number) => {
     setGrid(g => {
@@ -67,6 +77,7 @@ export default function EnsDisponibilites() {
 
   const handleSave = async () => {
     if (!semestreId) return setError("Veuillez sélectionner un semestre");
+    if (!coursId) return setError("Veuillez sélectionner un cours");
     setSaving(true);
     setError(null);
     try {
@@ -79,7 +90,8 @@ export default function EnsDisponibilites() {
           }
         }
       }
-      await apiSaveMyDispos(semestreId, disponibilites as any);
+      const res = await apiSaveMyDispos(semestreId, coursId, disponibilites as any);
+      setConflits(res.conflits ?? []);
       setSaved(true);
       setChanged(false);
       setTimeout(() => setSaved(false), 3000);
@@ -89,6 +101,7 @@ export default function EnsDisponibilites() {
   };
 
   const totalHours = grid.flat().filter(v => v === "dispo").length * 1;
+  const coursActuel = mesCours.find(c => c.id === coursId);
 
   return (
     <div className="space-y-5">
@@ -96,20 +109,34 @@ export default function EnsDisponibilites() {
         <h1 className="text-2xl font-bold text-slate-900">Mes disponibilités</h1>
         <div className="flex items-center gap-3">
           <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)}
-            className="h-10 min-w-[200px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            className="h-10 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
             {semestres.map(s => (
               <option key={s.id} value={s.id}>{s.libelle} — {s.annee}</option>
+            ))}
+          </select>
+          <select value={coursId} onChange={(e) => setCoursId(e.target.value)}
+            className="h-10 min-w-[220px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            {mesCours.map(c => (
+              <option key={c.id} value={c.id}>{c.intitule} — {c.niveauLibelle}</option>
             ))}
           </select>
           <Button
             leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             onClick={handleSave}
-            disabled={saving || loading || !semestreId}
+            disabled={saving || loading || !semestreId || !coursId}
           >
             {saving ? "Sauvegarde..." : "Sauvegarder"}
           </Button>
         </div>
       </div>
+
+      {coursActuel && (
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <BookOpen className="h-4 w-4 text-emit-sky" />
+          <span>Grille pour <strong>{coursActuel.intitule}</strong></span>
+          <Badge tone="blue">{coursActuel.niveauLibelle}</Badge>
+        </div>
+      )}
 
       {saved && (
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700">
@@ -119,6 +146,18 @@ export default function EnsDisponibilites() {
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
           <XCircle className="h-4 w-4 shrink-0" /> {error}
+        </div>
+      )}
+      {conflits.length > 0 && (
+        <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="h-4 w-4 shrink-0" /> Conflit entre deux de vos cours
+          </div>
+          {conflits.map((c, i) => (
+            <p key={i} className="pl-6 text-xs">
+              {c.jour} {c.creneau} : <strong>{c.cours1}</strong> et <strong>{c.cours2}</strong> se chevauchent — vous êtes déclaré(e) disponible pour les deux en même temps.
+            </p>
+          ))}
         </div>
       )}
 
@@ -147,7 +186,7 @@ export default function EnsDisponibilites() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-              <table className="w-full min-w-[640px] border-collapse text-sm">
+              <table className="w-full min-w-[700px] border-collapse text-sm">
                 <thead>
                   <tr>
                     <th className="sticky left-0 z-10 bg-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-600 border-r border-slate-200">
