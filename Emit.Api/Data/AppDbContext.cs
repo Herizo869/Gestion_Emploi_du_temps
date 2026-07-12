@@ -9,6 +9,8 @@ public class AppDbContext : DbContext
 
 
 
+    public DbSet<UserProfile> Profiles => Set<UserProfile>();
+
     public DbSet<User> Users => Set<User>();
     public DbSet<Enseignant> Enseignants => Set<Enseignant>();
     public DbSet<Salle> Salles => Set<Salle>();
@@ -24,6 +26,10 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        // Table gérée par Supabase/trigger — EF ne doit pas essayer de la créer/migrer
+        b.Entity<UserProfile>().ToTable("profiles", t => t.ExcludeFromMigrations());
+        b.Entity<UserProfile>().HasKey(p => p.Id);
+
         b.Entity<User>().HasIndex(u => u.Email).IsUnique();
         b.Entity<User>()
             .HasOne(u => u.Enseignant)

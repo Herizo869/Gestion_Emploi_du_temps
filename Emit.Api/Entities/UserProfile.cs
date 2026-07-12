@@ -1,0 +1,12 @@
+namespace Emit.Api.Entities;
+
+public class UserProfile
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = null!;
+    public string? Username { get; set; }
+    public string? FullName { get; set; }
+    public string? AvatarUrl { get; set; }
+    public string Role { get; set; } = "enseignant"; // 'admin' | 'enseignant'
+    public bool EmailVerified { get; set; }
+}
