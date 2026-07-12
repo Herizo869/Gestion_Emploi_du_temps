@@ -30,13 +30,7 @@ type AuthContextType = {
   session: Session | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ ok: boolean; role?: UserRole; error?: string }>;
-  register: (
-    email: string,
-    password: string,
-    fullName?: string
-  ) => Promise<{ ok: boolean; error?: string; needsVerification?: boolean }>;
   logout: () => Promise<void>;
-  resendVerification: (email: string) => Promise<{ ok: boolean; error?: string }>;
   setUser: (user: AppUser | null) => void;
 };
 
@@ -177,62 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { ok: true, role: appUser.role };
   };
 
-  // ── Register ──────────────────────────────────────────────────────────────
-  //
-  // Le trigger on_auth_user_created crée automatiquement une ligne dans
-  // public.profiles avec role = 'enseignant' et full_name depuis raw_user_meta_data.
 
-  const register = async (
-    email: string,
-    password: string,
-    fullName?: string
-  ): Promise<{ ok: boolean; error?: string; needsVerification?: boolean }> => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        // full_name est lu par le trigger handle_new_user() dans raw_user_meta_data
-        data: { full_name: fullName ?? "" },
-      },
-    });
-
-    if (error) {
-      if (
-        error.message.includes("already registered") ||
-        error.message.includes("already been registered") ||
-        error.message.includes("User already registered")
-      ) {
-        return { ok: false, error: "Cet email est déjà utilisé." };
-      }
-      return { ok: false, error: error.message };
-    }
-
-    if (!data.user) return { ok: false, error: "Erreur lors de la création du compte." };
-
-    // Fallback : insérer le profil manuellement si le trigger ne l'a pas fait
-    // (le trigger SECURITY DEFINER devrait suffire, mais on sécurise)
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .upsert(
-        {
-          id: data.user.id,
-          email: data.user.email ?? email,
-          full_name: fullName ?? "",
-          role: "enseignant",
-          email_verified: data.user.email_confirmed_at != null,
-        },
-        { onConflict: "id", ignoreDuplicates: true }
-      );
-
-    if (profileError) {
-      console.warn("[AuthContext] Profil non créé par upsert (le trigger l'a peut-être déjà créé) :", profileError.message);
-    }
-
-    // needsVerification = true si Supabase requiert une confirmation email
-    // (data.session est null dans ce cas)
-    const needsVerification = !data.session;
-    return { ok: true, needsVerification };
-  };
 
   // ── Logout ────────────────────────────────────────────────────────────────
 
@@ -244,19 +183,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = "/login";
   };
 
-  // ── Renvoi email de vérification ─────────────────────────────────────────
 
-  const resendVerification = async (
-    email: string
-  ): Promise<{ ok: boolean; error?: string }> => {
-    const { error } = await supabase.auth.resend({ type: "signup", email });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
-  };
 
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, login, register, logout, resendVerification, setUser }}
+      value={{ user, session, loading, login, logout, setUser }}
     >
       {children}
     </AuthContext.Provider>
