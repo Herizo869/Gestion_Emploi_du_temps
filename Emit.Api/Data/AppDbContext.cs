@@ -32,6 +32,7 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.SetNull);
 
         b.Entity<Enseignant>().HasIndex(e => e.Email).IsUnique();
+        b.Entity<Enseignant>().HasIndex(e => e.SupabaseAuthUserId).IsUnique();
         b.Entity<Salle>().HasIndex(s => s.Numero).IsUnique();
 
         b.Entity<CoursEnseignant>().HasKey(x => new { x.CoursId, x.EnseignantId });

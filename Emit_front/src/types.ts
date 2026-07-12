@@ -23,6 +23,8 @@ export interface Enseignant {
   nbCours: number;
   heuresDisponibles?: number;
   heuresPlanifiees?: number;
+  /** ID de l'utilisateur Supabase Auth (si un compte a été créé) */
+  supabaseAuthUserId?: string | null;
 }
 
 export interface Salle {
