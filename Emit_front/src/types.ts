@@ -7,7 +7,7 @@ export interface User {
   email: string;
   role: Role;
   specialite?: string;
-  statut?: "Permanent" | "Vacataire" | "Invite";
+  statut?: "Permanent" | "Vacataire" | "Invite" | "permanent" | "vacataire" | "invite";
 }
 
 export type CoursType = "CM" | "TD" | "TP";
@@ -18,8 +18,10 @@ export interface Enseignant {
   nom: string;
   email: string;
   specialite: string;
-  statut: "Permanent" | "Vacataire" | "Invite";
+  statut: "Permanent" | "Vacataire" | "Invite" | "permanent" | "vacataire" | "invite";
   nbCours: number;
+  heuresDisponibles?: number;
+  heuresPlanifiees?: number;
 }
 
 export interface Salle {
@@ -83,7 +85,9 @@ export interface SlotEDT {
   intitule: string;
   type: CoursType;
   enseignant: string;
+  enseignantId?: string;
   salle: string;
+  salleId?: string;
   niveau: string;
   filiere: string;
 }
@@ -105,4 +109,17 @@ export interface LogEntry {
   entite: string;
   ancien?: string;
   nouveau?: string;
+}
+
+export interface Conflit {
+  id: string;
+  type: string;
+  description: string;
+  date: string;
+}
+
+export interface GenerationEdtResult {
+  slotsCrees: number;
+  coursNonPlanifies: string[];
+  conflits: Conflit[];
 }

@@ -40,11 +40,11 @@ export default function EnsProfil() {
       <Card>
         <CardBody className="flex items-center gap-4">
           <div className="grid h-16 w-16 place-items-center rounded-full bg-emit-navy text-lg font-bold text-white">
-            {user?.prenom[0]}{user?.nom[0]}
+            {(user?.full_name ?? user?.email ?? "?").split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()}
           </div>
           <div>
-            <p className="text-lg font-semibold">{user?.prenom} {user?.nom}</p>
-            <p className="text-sm text-slate-500">Enseignant · <Badge tone="green">{user?.statut}</Badge></p>
+            <p className="text-lg font-semibold">{user?.full_name ?? user?.email?.split("@")[0]}</p>
+            <p className="text-sm text-slate-500">Enseignant · <Badge tone="green">{user?.statut ?? "actif"}</Badge></p>
           </div>
         </CardBody>
       </Card>
@@ -58,13 +58,12 @@ export default function EnsProfil() {
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Prénom" defaultValue={user?.prenom} />
-            <Input label="Nom" defaultValue={user?.nom} />
+            <Input label="Nom complet" defaultValue={user?.full_name ?? ""} />
             <Input label="Email" type="email" defaultValue={user?.email} />
-            <Input label="Spécialité" defaultValue={user?.specialite} />
+            <Input label="Spécialité" defaultValue={user?.specialite ?? ""} />
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Statut</label>
-              <select defaultValue={user?.statut} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
+              <select defaultValue={user?.statut ?? "permanent"} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
                 <option value="permanent">permanent</option>
                 <option value="vacataire">vacataire</option>
                 <option value="invite">invité</option>
