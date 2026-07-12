@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { apiLogin, setToken } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -159,9 +160,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!data.user) return { ok: false, error: "Utilisateur introuvable." };
 
+    // 1️⃣ D'abord récupérer le token API C# et le stocker AVANT de mettre à jour le user
+    //    (sinon DataContext.refresh() se déclenche sans token → 401 Unauthorized)
+    try {
+      const apiRes = await apiLogin(email, password);
+      setToken(apiRes.token);
+    } catch (apiErr) {
+      console.warn("[AuthContext] Impossible d'obtenir le token API C# :", apiErr);
+    }
+
+    // 2️⃣ Ensuite seulement mettre à jour le user → DataContext.refresh() aura le token
     const appUser = await fetchProfile(data.user);
     setUser(appUser);
     setSession(data.session);
+
     return { ok: true, role: appUser.role };
   };
 
@@ -226,6 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await supabase.auth.signOut();
+    setToken(null);
     setUser(null);
     setSession(null);
     window.location.href = "/login";

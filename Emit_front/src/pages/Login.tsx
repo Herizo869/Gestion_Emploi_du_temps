@@ -493,8 +493,8 @@ function PasswordStrength({ password }: { password: string }) {
 }
 
 // Accès rapide pour le développement
-// ⚠️  Remplacez les mots de passe ci-dessous par les vrais mots de passe de vos comptes Supabase.
-// L'email admin correspond au compte promu via : UPDATE public.profiles SET role='admin' WHERE email='miaroandriamanalintsoa007@gmail.com';
+// Admin : compte Supabase existant de l'utilisateur
+// Enseignant : identifiants du DbSeeder
 function DevFill({ onFill }: { onFill: (email: string, pwd: string) => void }) {
   return (
     <div className="mt-6 border-t border-slate-100 pt-4">
@@ -502,17 +502,22 @@ function DevFill({ onFill }: { onFill: (email: string, pwd: string) => void }) {
         Accès rapide (dev)
       </p>
       <div className="grid grid-cols-2 gap-2">
-        {/* Email admin promu dans Supabase via UPDATE public.profiles SET role='admin' */}
         <Button
           id="dev-admin"
           variant="outline"
           size="sm"
-          onClick={() => onFill("miaroandriamanalintsoa007@gmail.com", "")}
-          title="miaroandriamanalintsoa007@gmail.com — rôle admin dans public.profiles"
+          onClick={() => onFill("miaroandriamanalintsoa007@gmail.com", "Miaroandria007***")}
+          title="Compte Admin Supabase"
         >
           Admin
         </Button>
-        <Button id="dev-teacher" variant="outline" size="sm" onClick={() => onFill("herizo@emit.mg", "Prof1234!")}>
+        <Button
+          id="dev-teacher"
+          variant="outline"
+          size="sm"
+          onClick={() => onFill("herizo@emit.mg", "Enseignant@123")}
+          title="herizo@emit.mg — rôle Enseignant (DbSeeder)"
+        >
           Enseignant
         </Button>
       </div>

@@ -3,7 +3,7 @@ import type {
   SlotEDT, Notif, LogEntry, User,
 } from "@/types";
 
-const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "https://localhost:5001").replace(/\/$/, "");
+const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "http://localhost:5000").replace(/\/$/, "");
 const TOKEN_KEY = "emit-token";
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
