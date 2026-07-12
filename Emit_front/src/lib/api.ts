@@ -1,9 +1,7 @@
 import type {
   Enseignant, Salle, Cours, Niveau, Filiere, Semestre,
-  SlotEDT, Notif, LogEntry, User, GenerationEdtResult,
+  SlotEDT, Notif, LogEntry, User,
 } from "@/types";
-
-export type { GenerationEdtResult };
 
 const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "https://localhost:5001").replace(/\/$/, "");
 const TOKEN_KEY = "emit-token";
@@ -48,6 +46,13 @@ export const apiLogin = (email: string, password: string) =>
     body: JSON.stringify({ email, password }),
   });
 export const apiMe = () => request<User>("/api/auth/me");
+export const apiUpdateProfile = (data: { prenom: string; nom: string; email: string }) =>
+  request<User>("/api/auth/me", { method: "PUT", body: JSON.stringify(data) });
+export const apiChangePassword = (currentPassword: string, newPassword: string) =>
+  request<{ message: string }>("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
 
 // ───── Enseignants ─────────────────────────────────────────
 export const apiEnseignants = () => request<Enseignant[]>("/api/enseignants");
@@ -100,34 +105,65 @@ export const apiDepublierSemestre = (id: string) =>
   request<Semestre>(`/api/semestres/${id}/depublier`, { method: "POST" });
 
 // ───── EDT ─────────────────────────────────────────────────
+
+export interface SlotUpdateDto {
+  salleId: string;
+  enseignantId: string;
+  jour: string;
+  heureDebut: string;
+  heureFin: string;
+}
+
+export interface ConflitDto {
+  id: string;
+  type: string;
+  description: string;
+  date: string;
+}
+
+export interface SlotConflitResponse {
+  message: string;
+  conflits: ConflitDto[];
+  sallesLibres: string[];
+}
+
+export interface EdtGenerationResult {
+  slotsCrees: number;
+  coursNonPlanifies: string[];
+  conflits: ConflitDto[];
+}
+
+export type GenerationEdtResult = EdtGenerationResult;
+
+// Récupération EDT
 export const apiEdt = (params: {
-  niveau?: string;
-  niveauId?: string;
-  filiere?: string;
-  filiereId?: string;
-  semestreId?: string;
-  salleId?: string;
+  semestreId?: string; niveauId?: string; filiereId?: string; salleId?: string;
+  enseignantId?: string;
 } = {}) => {
   const q = new URLSearchParams();
-  const niveauVal = params.niveau || params.niveauId;
-  const filiereVal = params.filiere || params.filiereId;
-  if (niveauVal) q.set("niveau", niveauVal);
-  if (filiereVal) q.set("filiere", filiereVal);
   if (params.semestreId) q.set("semestreId", params.semestreId);
+  if (params.niveauId) q.set("niveauId", params.niveauId);
+  if (params.filiereId) q.set("filiereId", params.filiereId);
   if (params.salleId) q.set("salleId", params.salleId);
+  if (params.enseignantId) q.set("enseignantId", params.enseignantId);
   const s = q.toString();
   return request<SlotEDT[]>(`/api/edt${s ? `?${s}` : ""}`);
 };
+
 export const apiEdtMe = (semestreId?: string) =>
   request<SlotEDT[]>(`/api/edt/me${semestreId ? `?semestreId=${semestreId}` : ""}`);
-export interface GenerationEdtResult {
-  slotsCrees: number;
-  coursNonPlanifies: string[];
-  conflits: { id: string; type: string; description: string; date: string }[];
-}
-export const apiGenererEdt = (semestreId: string) =>
-  request<GenerationEdtResult>(`/api/edt/generate/${semestreId}`, { method: "POST" });
 
+export const apiGenererEdt = (semestreId: string) =>
+  request<EdtGenerationResult>(`/api/edt/generate/${semestreId}`, { method: "POST" });
+
+export const apiConflitsEdt = (semestreId: string) =>
+  request<ConflitDto[]>(`/api/edt/${semestreId}/conflits`);
+
+export const apiUpdateSlot = (id: string, data: SlotUpdateDto) =>
+  request<SlotEDT>(`/api/edt/${id}`, { method: "PUT", body: JSON.stringify(data) });
+
+export const apiDeleteSlot = (id: string) =>
+  request<void>(`/api/edt/${id}`, { method: "DELETE" });
 // ───── Notifications ───────────────────────────────────────
 export const apiNotifications = () => request<Notif[]>("/api/notifications");
 export const apiMarkNotifRead = (id: string) =>
@@ -155,10 +191,16 @@ export const apiSaveMyDispos = (semestreId: string, coursId: string, dispos: Dis
   request<{ conflits: ConflitDispo[] }>(`/api/disponibilites/me?semestreId=${semestreId}&coursId=${coursId}`, { method: "PUT", body: JSON.stringify(dispos) });
 export const apiMesConflitsDispos = (semestreId: string) =>
   request<ConflitDispo[]>(`/api/disponibilites/mes-conflits?semestreId=${semestreId}`);
-export const apiDisposEnseignant = (enseignantId: string, semestreId: string, coursId: string) =>
-  request<Dispo[]>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}&coursId=${coursId}`);
-export const apiSaveDisponibilites = (enseignantId: string, semestreId: string, coursId: string, disponibilites: Dispo[]) =>
-  request<{ conflits: ConflitDispo[] }>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}&coursId=${coursId}`, { method: "PUT", body: JSON.stringify(disponibilites) });
+export const apiDisposEnseignant = (enseignantId: string, semestreId: string, coursId?: string) => {
+  let url = `/api/disponibilites/${enseignantId}?semestreId=${semestreId}`;
+  if (coursId) url += `&coursId=${coursId}`;
+  return request<Dispo[]>(url);
+};
+export const apiSaveDisponibilites = (enseignantId: string, semestreId: string, coursId: string | undefined, disponibilites: Dispo[]) => {
+  let url = `/api/disponibilites/${enseignantId}?semestreId=${semestreId}`;
+  if (coursId) url += `&coursId=${coursId}`;
+  return request<{ conflits: ConflitDispo[] }>(url, { method: "PUT", body: JSON.stringify(disponibilites) });
+};
 export const apiConflitsDispos = (enseignantId: string, semestreId: string) =>
   request<ConflitDispo[]>(`/api/disponibilites/conflits?semestreId=${semestreId}&enseignantId=${enseignantId}`);
 
@@ -170,6 +212,25 @@ export interface ExportParams {
   salleId?: string;
   orientation?: "portrait" | "paysage";
 }
+
+// ───── Vérification EDT enseignant ─────────────────────────
+
+export interface EdtCheckParams {
+  enseignantId: string;
+  semestreId: string;
+}
+
+export const apiGetEdt = (params: EdtCheckParams) => {
+
+  const q = new URLSearchParams();
+
+  q.set("enseignantId", params.enseignantId);
+  q.set("semestreId", params.semestreId);
+
+  return request<SlotEDT[]>(
+    `/api/edt?${q.toString()}`
+  );
+};
 
 function buildExportQuery(params: ExportParams) {
   const q = new URLSearchParams();
@@ -202,3 +263,4 @@ export const apiDownloadPdf = (params: ExportParams = {}) =>
   downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf");
 export const apiDownloadCsv = (params: ExportParams = {}) =>
   downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv");
+

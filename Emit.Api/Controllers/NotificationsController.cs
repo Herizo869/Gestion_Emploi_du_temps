@@ -25,7 +25,7 @@ public class NotificationsController : ControllerBase
         return Ok(_map.Map<List<NotificationDto>>(list));
     }
 
-    [HttpPatch("{id:guid}/read")]
+    [HttpPost("{id:guid}/read")]
     public async Task<IActionResult> MarkRead(Guid id)
     {
         var n = await _db.Notifications.FindAsync(id);

@@ -38,8 +38,11 @@ public class MappingProfile : Profile
 
         CreateMap<Niveau, NiveauDto>();
 
-        CreateMap<Semestre, SemestreDto>();
-        CreateMap<SemestreDto, Semestre>().ForMember(e => e.Slots, o => o.Ignore());
+        CreateMap<Semestre, SemestreDto>()
+            .ForMember(d => d.Statut, o => o.MapFrom(s => s.Statut.ToString().ToLowerInvariant()));
+        CreateMap<SemestreDto, Semestre>()
+            .ForMember(e => e.Statut, o => o.Ignore())
+            .ForMember(e => e.Slots, o => o.Ignore());
 
         CreateMap<Notification, NotificationDto>()
             .ForMember(d => d.Date, o => o.MapFrom(s => s.DateCreation));

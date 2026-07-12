@@ -19,6 +19,9 @@ export type AppUser = {
   // Champs métier optionnels issus de profiles ou user_metadata
   specialite?: string | null;
   statut?: string | null;
+  enseignantId?: string | null;
+  prenom?: string | null;
+  nom?: string | null;
 };
 
 type AuthContextType = {
@@ -33,6 +36,7 @@ type AuthContextType = {
   ) => Promise<{ ok: boolean; error?: string; needsVerification?: boolean }>;
   logout: () => Promise<void>;
   resendVerification: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  setUser: (user: AppUser | null) => void;
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -239,7 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, login, register, logout, resendVerification }}
+      value={{ user, session, loading, login, register, logout, resendVerification, setUser }}
     >
       {children}
     </AuthContext.Provider>

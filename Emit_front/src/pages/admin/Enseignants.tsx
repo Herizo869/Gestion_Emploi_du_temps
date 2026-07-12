@@ -23,7 +23,7 @@ const empty: Omit<Enseignant, "id"> = {
   nom: "",
   email: "",
   specialite: "",
-  statut: "permanent",
+  statut: "Permanent",
   nbCours: 0,
 };
 
@@ -175,9 +175,9 @@ export default function AdminEnseignants() {
               onChange={(e) => setStatut(e.target.value)}
             >
               <option value="">Tous statuts</option>
-              <option value="permanent">Permanent</option>
-              <option value="vacataire">Vacataire</option>
-              <option value="invite">Invité</option>
+              <option value="Permanent">Permanent</option>
+              <option value="Vacataire">Vacataire</option>
+              <option value="Invite">Invité</option>
             </select>
             <select
               className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
@@ -215,10 +215,11 @@ export default function AdminEnseignants() {
                 return (
                   <div
                     key={e.id}
-                    className={`group rounded-xl border bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-200 ${
+                    onClick={() => navigate(`/admin/disponibilites?enseignant=${e.id}`)}
+                    className={`group rounded-xl border bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer ${
                       isOverloaded
                         ? "border-red-200 hover:border-red-300"
-                        : "border-slate-200 hover:border-emit-sky/40"
+                        : "border-slate-200 hover:border-emit-sky/40 hover:-translate-y-0.5"
                     }`}
                   >
                     {/* ── Header : avatar + actions ── */}
@@ -243,12 +244,12 @@ export default function AdminEnseignants() {
                         <button
                           className="rounded-lg p-2 hover:bg-slate-100 transition-colors"
                           title="Modifier"
-                          onClick={() => openEdit(e)}
+                          onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}
                         >
                           <Edit2 className="h-4 w-4 text-slate-500" />
                         </button>
                         <button
-                          onClick={() => setConfirm(e)}
+                          onClick={(ev) => { ev.stopPropagation(); setConfirm(e); }}
                           className="rounded-lg p-2 hover:bg-red-50 transition-colors"
                           title="Supprimer"
                         >
@@ -373,10 +374,9 @@ export default function AdminEnseignants() {
           <Input label="Spécialité" placeholder="Génie logiciel" value={form.specialite} onChange={f("specialite")} />
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Statut</label>
-          <select value={form.statut} onChange={f("statut")} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
-            <option value="permanent">Permanent</option>
-            <option value="vacataire">Vacataire</option>
-            <option value="invite">Invité</option>
+          <select value={form.statut} onChange={f("statut")} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">              <option value="Permanent">Permanent</option>
+              <option value="Vacataire">Vacataire</option>
+              <option value="Invite">Invité</option>
           </select>
           </div>
         </div>

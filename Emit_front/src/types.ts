@@ -8,6 +8,7 @@ export interface User {
   role: Role;
   specialite?: string;
   statut?: "Permanent" | "Vacataire" | "Invite" | "permanent" | "vacataire" | "invite";
+  enseignantId?: string;
 }
 
 export type CoursType = "CM" | "TD" | "TP";

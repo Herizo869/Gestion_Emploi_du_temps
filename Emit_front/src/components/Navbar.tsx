@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Users, Building2, BookOpen, GraduationCap,
   CalendarRange, Zap, CalendarDays, History, User, Settings,
   Calendar, Bell, KeyRound, LogOut, ListChecks, ChevronDown, Menu, X,
+  AlertTriangle, Clock, MapPin, RefreshCw,
 } from "lucide-react";
 import Logo from "./Logo";
 import { useAuth } from "@/context/AuthContext";
@@ -179,24 +180,72 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
               )}
             </button>
             {openNotif && !notifLink && (
-              <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-emit-navy/10 bg-white shadow-xl">
-                <p className="border-b border-slate-100 bg-emit-navy px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-white">
-                  Notifications
-                </p>
-                <ul className="max-h-80 overflow-y-auto">
-                  {notifications.slice(0, 5).map((n) => (
-                    <li
-                      key={n.id}
-                      className={`border-b border-slate-50 px-4 py-3 text-sm last:border-0 ${
-                        !n.lu ? "bg-emit-sky/10" : ""
-                      }`}
-                    >
-                      <p className="font-medium text-emit-navy">{n.titre}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">{n.description}</p>
-                      <p className="mt-1 text-[10px] text-slate-400">{n.date}</p>
+              <div className="absolute right-0 mt-2 w-96 overflow-hidden rounded-xl border border-emit-navy/10 bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-100 bg-emit-navy px-4 py-2.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-white">
+                    Notifications {unread > 0 && <span className="ml-1.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px]">{unread}</span>}
+                  </span>
+                  {notifications.length > 0 && (
+                    <button onClick={() => nav(role === "enseignant" ? "/enseignant/notifications" : "/admin/historique")} className="text-[10px] text-emit-sky hover:text-white transition-colors">
+                      Voir tout
+                    </button>
+                  )}
+                </div>
+                <ul className="max-h-96 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <li className="px-4 py-8 text-center text-xs text-slate-400">
+                      Aucune notification
                     </li>
-                  ))}
+                  ) : (
+                    notifications.slice(0, 8).map((n) => {
+                      const t = n.type as string;
+                      const icon = t === "planning" ? <Calendar className="h-3.5 w-3.5" />
+                        : t === "cours" ? <BookOpen className="h-3.5 w-3.5" />
+                        : t === "salle" ? <MapPin className="h-3.5 w-3.5" />
+                        : t === "conflit" ? <AlertTriangle className="h-3.5 w-3.5" />
+                        : t === "edt" ? <Clock className="h-3.5 w-3.5" />
+                        : <RefreshCw className="h-3.5 w-3.5" />;
+                      const bg = t === "planning" ? "bg-red-100 text-red-700"
+                        : t === "cours" ? "bg-blue-100 text-blue-700"
+                        : t === "salle" ? "bg-purple-100 text-purple-700"
+                        : t === "conflit" ? "bg-orange-100 text-orange-700"
+                        : t === "edt" ? "bg-cyan-100 text-cyan-700"
+                        : "bg-green-100 text-green-700";
+                      return (
+                        <li
+                          key={n.id}
+                          className={`flex items-start gap-3 border-b border-slate-50 px-4 py-3 text-sm last:border-0 transition-colors ${
+                            !n.lu ? "bg-emit-sky/5" : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${bg} shadow-sm`}>
+                            {icon}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-semibold text-slate-800 truncate">{n.titre}</p>
+                              {!n.lu && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />}
+                            </div>
+                            <p className="text-[11px] text-slate-500 line-clamp-1">{n.description}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              {n.date ? new Date(n.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })
+                  )}
                 </ul>
+                {notifications.length > 0 && (
+                  <div className="border-t border-slate-100 px-4 py-2 text-center">
+                    <button
+                      onClick={() => nav(role === "enseignant" ? "/enseignant/notifications" : "/admin/historique")}
+                      className="text-[11px] font-medium text-emit-sky hover:text-emit-navy transition-colors"
+                    >
+                      Voir toutes les notifications ({notifications.length})
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

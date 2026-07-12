@@ -1,2 +1,4 @@
-bin 
+# Les règles d'ignorance sont dans le .gitignore racine
+# Ce fichier existe pour que Git reconnaisse le dossier
+bin
 obj

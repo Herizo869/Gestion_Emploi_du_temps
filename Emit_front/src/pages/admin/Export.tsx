@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, FileText, FileSpreadsheet, Link2, Upload, Check } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import WeeklyGrid from "@/components/WeeklyGrid";
@@ -136,7 +137,11 @@ export default function AdminExport() {
         />
         <CardBody>
           {loading ? (
-            <p className="py-6 text-center text-sm text-slate-500">Chargement...</p>
+            <div className="space-y-3 py-6">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
           ) : (
             <WeeklyGrid slots={slots} />
           )}

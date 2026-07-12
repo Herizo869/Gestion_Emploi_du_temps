@@ -22,11 +22,11 @@ export const CRENEAUX = [
 export const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"] as const;
 
 export const enseignants: Enseignant[] = [
-  { id: "e1", prenom: "Herizo", nom: "RAKOTO", email: "herizo@emit.mg", specialite: "Génie logiciel", statut: "permanent", nbCours: 4 },
-  { id: "e2", prenom: "Miaro", nom: "RABE", email: "miaro@emit.mg", specialite: "Bases de données", statut: "permanent", nbCours: 3 },
-  { id: "e3", prenom: "Andry", nom: "RANAIVO", email: "andry@emit.mg", specialite: "Réseaux", statut: "vacataire", nbCours: 2 },
-  { id: "e4", prenom: "Kanto", nom: "RASOLO", email: "kanto@emit.mg", specialite: "Algorithmique", statut: "permanent", nbCours: 5 },
-  { id: "e5", prenom: "Fita", nom: "RANDRIA", email: "fita@emit.mg", specialite: "Web & Mobile", statut: "invite", nbCours: 2 },
+  { id: "e1", prenom: "Herizo", nom: "RAKOTO", email: "herizo@emit.mg", specialite: "Génie logiciel", statut: "Permanent", nbCours: 4 },
+  { id: "e2", prenom: "Miaro", nom: "RABE", email: "miaro@emit.mg", specialite: "Bases de données", statut: "Permanent", nbCours: 3 },
+  { id: "e3", prenom: "Andry", nom: "RANAIVO", email: "andry@emit.mg", specialite: "Réseaux", statut: "Vacataire", nbCours: 2 },
+  { id: "e4", prenom: "Kanto", nom: "RASOLO", email: "kanto@emit.mg", specialite: "Algorithmique", statut: "Permanent", nbCours: 5 },
+  { id: "e5", prenom: "Fita", nom: "RANDRIA", email: "fita@emit.mg", specialite: "Web & Mobile", statut: "Invite", nbCours: 2 },
 ];
 
 export const salles: Salle[] = [
