@@ -69,6 +69,10 @@ public class AppDbContext : DbContext
         b.Entity<Disponibilite>()
             .HasOne(d => d.Semestre).WithMany().HasForeignKey(d => d.SemestreId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<Disponibilite>()
-            .HasIndex(d => new { d.EnseignantId, d.SemestreId, d.Jour, d.Creneau }).IsUnique();
+            .HasOne(d => d.Cours).WithMany().HasForeignKey(d => d.CoursId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<Disponibilite>()
+            .HasOne(d => d.Niveau).WithMany().HasForeignKey(d => d.NiveauId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<Disponibilite>()
+            .HasIndex(d => new { d.EnseignantId, d.SemestreId, d.CoursId, d.Jour, d.Creneau }).IsUnique();
     }
 }

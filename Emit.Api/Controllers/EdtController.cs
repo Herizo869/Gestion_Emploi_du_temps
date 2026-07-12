@@ -51,6 +51,12 @@ public class EdtController : ControllerBase
         return Ok(res);
     }
 
+    [HttpGet("debug-salles"), AllowAnonymous]
+    public async Task<IActionResult> DebugSalles()
+    {
+        return Ok(await _db.Salles.Select(s => s.Numero).ToListAsync());
+    }
+
     [HttpGet("{semestreId:guid}/conflits"), Authorize(Roles = "Admin")]
     public async Task<ActionResult<List<ConflitDto>>> Conflits(Guid semestreId)
         => Ok(await _gen.DetectConflitsAsync(semestreId));
@@ -87,10 +93,11 @@ public class EdtController : ControllerBase
         var conflitSalle = autresSlots.FirstOrDefault(s => s.SalleId == dto.SalleId);
         var conflitEnseignant = autresSlots.FirstOrDefault(s => s.EnseignantId == dto.EnseignantId);
 
-        // Nouveau : l'enseignant a-t-il déclaré être indisponible sur ce créneau ce jour-là ?
+        // Nouveau : l'enseignant a-t-il déclaré être indisponible sur ce créneau ce jour-là POUR CE COURS ?
         var indispoEnseignant = await _db.Disponibilites
             .Where(d => d.SemestreId == slot.SemestreId
                      && d.EnseignantId == dto.EnseignantId
+                     && d.CoursId == slot.CoursId
                      && d.EstIndisponible
                      && d.Jour == dto.Jour.ToString())
             .ToListAsync();
@@ -162,8 +169,19 @@ public class EdtController : ControllerBase
     {
         var s = await _db.Slots.FindAsync(id);
         if (s is null) return NotFound();
+        var coursId = s.CoursId;
         _db.Slots.Remove(s);
         await _db.SaveChangesAsync();
+
+        // Recalculer les HeuresPlanifiees de ce cours
+        var cours = await _db.Cours.FindAsync(coursId);
+        if (cours != null)
+        {
+            var count = await _db.Slots.CountAsync(x => x.CoursId == coursId);
+            cours.HeuresPlanifiees = (int)(count * 1.5);
+            await _db.SaveChangesAsync();
+        }
+
         return NoContent();
     }
 }
