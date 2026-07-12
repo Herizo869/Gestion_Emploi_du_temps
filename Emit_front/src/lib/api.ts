@@ -2,15 +2,14 @@ import type {
   Enseignant, Salle, Cours, Niveau, Filiere, Semestre,
   SlotEDT, Notif, LogEntry, User,
 } from "@/types";
+import { supabase } from "@/lib/supabase";
 
-const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "https://localhost:5001").replace(/\/$/, "");
-const TOKEN_KEY = "emit-token";
+const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "http://localhost:5000").replace(/\/$/, "");
 
-export const getToken = () => localStorage.getItem(TOKEN_KEY);
-export const setToken = (t: string | null) => {
-  if (t) localStorage.setItem(TOKEN_KEY, t);
-  else localStorage.removeItem(TOKEN_KEY);
-};
+async function getAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
@@ -18,13 +17,19 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (init.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
-  const token = getToken();
+  const token = await getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
   if (res.status === 401) {
-    setToken(null);
-    localStorage.removeItem("emit-user");
+    // Lire le corps de la réponse pour diagnostiquer
+    const body = await res.text().catch(() => "(corps vide)");
+    console.warn("[api.ts] 401 sur:", path, "→ réponse:", body);
+    await supabase.auth.signOut().catch(() => {});
+    // Petit délai pour voir le message dans la console
+    await new Promise(r => setTimeout(r, 5000));
+    window.location.replace("/login");
+    throw new Error("Session expirée.");
   }
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
@@ -38,14 +43,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
-// ───── Auth ────────────────────────────────────────────────
-export interface LoginResponse { token: string; user: User; }
-export const apiLogin = (email: string, password: string) =>
-  request<LoginResponse>("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
-export const apiMe = () => request<User>("/api/auth/me");
+// ───── Auth / Profil ──────────────────────────────────────
 export const apiUpdateProfile = (data: { prenom: string; nom: string; email: string }) =>
   request<User>("/api/auth/me", { method: "PUT", body: JSON.stringify(data) });
 export const apiChangePassword = (currentPassword: string, newPassword: string) =>
@@ -105,40 +103,18 @@ export const apiDepublierSemestre = (id: string) =>
   request<Semestre>(`/api/semestres/${id}/depublier`, { method: "POST" });
 
 // ───── EDT ─────────────────────────────────────────────────
-
 export interface SlotUpdateDto {
-  salleId: string;
-  enseignantId: string;
-  jour: string;
-  heureDebut: string;
-  heureFin: string;
+  salleId: string; enseignantId: string; jour: string;
+  heureDebut: string; heureFin: string;
 }
-
-export interface ConflitDto {
-  id: string;
-  type: string;
-  description: string;
-  date: string;
-}
-
-export interface SlotConflitResponse {
-  message: string;
-  conflits: ConflitDto[];
-  sallesLibres: string[];
-}
-
-export interface EdtGenerationResult {
-  slotsCrees: number;
-  coursNonPlanifies: string[];
-  conflits: ConflitDto[];
-}
-
+export interface ConflitDto { id: string; type: string; description: string; date: string; }
+export interface SlotConflitResponse { message: string; conflits: ConflitDto[]; sallesLibres: string[]; }
+export interface EdtGenerationResult { slotsCrees: number; coursNonPlanifies: string[]; conflits: ConflitDto[]; }
 export type GenerationEdtResult = EdtGenerationResult;
 
-// Récupération EDT
 export const apiEdt = (params: {
-  semestreId?: string; niveauId?: string; filiereId?: string; salleId?: string;
-  enseignantId?: string;
+  semestreId?: string; niveauId?: string; filiereId?: string;
+  salleId?: string; enseignantId?: string;
 } = {}) => {
   const q = new URLSearchParams();
   if (params.semestreId) q.set("semestreId", params.semestreId);
@@ -146,8 +122,7 @@ export const apiEdt = (params: {
   if (params.filiereId) q.set("filiereId", params.filiereId);
   if (params.salleId) q.set("salleId", params.salleId);
   if (params.enseignantId) q.set("enseignantId", params.enseignantId);
-  const s = q.toString();
-  return request<SlotEDT[]>(`/api/edt${s ? `?${s}` : ""}`);
+  return request<SlotEDT[]>(`/api/edt${q.toString() ? `?${q}` : ""}`);
 };
 
 export const apiEdtMe = (semestreId?: string) =>
@@ -164,6 +139,7 @@ export const apiUpdateSlot = (id: string, data: SlotUpdateDto) =>
 
 export const apiDeleteSlot = (id: string) =>
   request<void>(`/api/edt/${id}`, { method: "DELETE" });
+
 // ───── Notifications ───────────────────────────────────────
 export const apiNotifications = () => request<Notif[]>("/api/notifications");
 export const apiMarkNotifRead = (id: string) =>
@@ -173,64 +149,36 @@ export const apiMarkNotifRead = (id: string) =>
 export const apiJournal = () => request<LogEntry[]>("/api/journal");
 
 // ───── Disponibilités ──────────────────────────────────────
-export interface Dispo {
-  jour: string;
-  creneau: string;
-  estDisponible: boolean;
-  estIndisponible: boolean;
-}
-export interface ConflitDispo {
-  jour: string;
-  creneau: string;
-  cours1: string;
-  cours2: string;
-}
+export interface Dispo { jour: string; creneau: string; estDisponible: boolean; estIndisponible: boolean; }
+export interface ConflitDispo { jour: string; creneau: string; cours1: string; cours2: string; }
+
 export const apiMyDispos = (semestreId: string, coursId: string) =>
   request<Dispo[]>(`/api/disponibilites/me?semestreId=${semestreId}&coursId=${coursId}`);
+
 export const apiSaveMyDispos = (semestreId: string, coursId: string, dispos: Dispo[]) =>
-  request<{ conflits: ConflitDispo[] }>(`/api/disponibilites/me?semestreId=${semestreId}&coursId=${coursId}`, { method: "PUT", body: JSON.stringify(dispos) });
+  request<{ conflits: ConflitDispo[] }>(`/api/disponibilites/me?semestreId=${semestreId}&coursId=${coursId}`,
+    { method: "PUT", body: JSON.stringify(dispos) });
+
 export const apiMesConflitsDispos = (semestreId: string) =>
   request<ConflitDispo[]>(`/api/disponibilites/mes-conflits?semestreId=${semestreId}`);
-export const apiDisposEnseignant = (enseignantId: string, semestreId: string, coursId?: string) => {
-  let url = `/api/disponibilites/${enseignantId}?semestreId=${semestreId}`;
-  if (coursId) url += `&coursId=${coursId}`;
-  return request<Dispo[]>(url);
-};
-export const apiSaveDisponibilites = (enseignantId: string, semestreId: string, coursId: string | undefined, disponibilites: Dispo[]) => {
-  let url = `/api/disponibilites/${enseignantId}?semestreId=${semestreId}`;
-  if (coursId) url += `&coursId=${coursId}`;
-  return request<{ conflits: ConflitDispo[] }>(url, { method: "PUT", body: JSON.stringify(disponibilites) });
-};
+
+export const apiDisposEnseignant = (enseignantId: string, semestreId: string, coursId?: string) =>
+  request<Dispo[]>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}${coursId ? `&coursId=${coursId}` : ""}`);
+
+export const apiSaveDisponibilites = (enseignantId: string, semestreId: string, coursId: string | undefined, disponibilites: Dispo[]) =>
+  request<{ conflits: ConflitDispo[] }>(`/api/disponibilites/${enseignantId}?semestreId=${semestreId}${coursId ? `&coursId=${coursId}` : ""}`,
+    { method: "PUT", body: JSON.stringify(disponibilites) });
+
 export const apiConflitsDispos = (enseignantId: string, semestreId: string) =>
   request<ConflitDispo[]>(`/api/disponibilites/conflits?semestreId=${semestreId}&enseignantId=${enseignantId}`);
 
 // ───── Export ──────────────────────────────────────────────
-export interface ExportParams {
-  semestreId?: string;
-  niveauId?: string;
-  filiereId?: string;
-  salleId?: string;
-  orientation?: "portrait" | "paysage";
-}
+export interface ExportParams { semestreId?: string; niveauId?: string; filiereId?: string; salleId?: string; orientation?: "portrait" | "paysage"; }
 
-// ───── Vérification EDT enseignant ─────────────────────────
+export interface EdtCheckParams { enseignantId: string; semestreId: string; }
 
-export interface EdtCheckParams {
-  enseignantId: string;
-  semestreId: string;
-}
-
-export const apiGetEdt = (params: EdtCheckParams) => {
-
-  const q = new URLSearchParams();
-
-  q.set("enseignantId", params.enseignantId);
-  q.set("semestreId", params.semestreId);
-
-  return request<SlotEDT[]>(
-    `/api/edt?${q.toString()}`
-  );
-};
+export const apiGetEdt = (params: EdtCheckParams) =>
+  request<SlotEDT[]>(`/api/edt?enseignantId=${params.enseignantId}&semestreId=${params.semestreId}`);
 
 function buildExportQuery(params: ExportParams) {
   const q = new URLSearchParams();
@@ -244,7 +192,7 @@ function buildExportQuery(params: ExportParams) {
 
 async function downloadFile(path: string, filename: string) {
   const headers = new Headers();
-  const token = getToken();
+  const token = await getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const res = await fetch(`${BASE}${path}`, { headers });
   if (!res.ok) throw new Error(`Échec du téléchargement (${res.status})`);
@@ -263,4 +211,3 @@ export const apiDownloadPdf = (params: ExportParams = {}) =>
   downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf");
 export const apiDownloadCsv = (params: ExportParams = {}) =>
   downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv");
-
