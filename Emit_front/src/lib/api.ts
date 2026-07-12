@@ -1,7 +1,9 @@
 import type {
   Enseignant, Salle, Cours, Niveau, Filiere, Semestre,
-  SlotEDT, Notif, LogEntry, User,
+  SlotEDT, Notif, LogEntry, User, GenerationEdtResult,
 } from "@/types";
+
+export type { GenerationEdtResult };
 
 const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "https://localhost:5001").replace(/\/$/, "");
 const TOKEN_KEY = "emit-token";
@@ -99,12 +101,20 @@ export const apiDepublierSemestre = (id: string) =>
 
 // ───── EDT ─────────────────────────────────────────────────
 export const apiEdt = (params: {
-  niveau?: string; filiere?: string; semestreId?: string;
+  niveau?: string;
+  niveauId?: string;
+  filiere?: string;
+  filiereId?: string;
+  semestreId?: string;
+  salleId?: string;
 } = {}) => {
   const q = new URLSearchParams();
-  if (params.niveau) q.set("niveau", params.niveau);
-  if (params.filiere) q.set("filiere", params.filiere);
+  const niveauVal = params.niveau || params.niveauId;
+  const filiereVal = params.filiere || params.filiereId;
+  if (niveauVal) q.set("niveau", niveauVal);
+  if (filiereVal) q.set("filiere", filiereVal);
   if (params.semestreId) q.set("semestreId", params.semestreId);
+  if (params.salleId) q.set("salleId", params.salleId);
   const s = q.toString();
   return request<SlotEDT[]>(`/api/edt${s ? `?${s}` : ""}`);
 };
