@@ -13,6 +13,11 @@ export const setToken = (t: string | null) => {
   else localStorage.removeItem(TOKEN_KEY);
 };
 
+async function getAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
@@ -28,8 +33,6 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const body = await res.text().catch(() => "(corps vide)");
     console.warn("[api.ts] 401 sur:", path, "→ réponse:", body);
     await supabase.auth.signOut().catch(() => {});
-    // Petit délai pour voir le message dans la console
-    await new Promise(r => setTimeout(r, 5000));
     window.location.replace("/login");
     throw new Error("Session expirée.");
   }
@@ -46,6 +49,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 // ───── Auth / Profil ──────────────────────────────────────
+export interface MeResponse {
+  id: string;
+  email: string;
+  prenom: string;
+  nom: string;
+  role: string;
+  enseignantId: string | null;
+}
+export const apiMe = () => request<MeResponse>("/api/auth/me");
 export const apiUpdateProfile = (data: { prenom: string; nom: string; email: string }) =>
   request<User>("/api/auth/me", { method: "PUT", body: JSON.stringify(data) });
 export const apiChangePassword = (currentPassword: string, newPassword: string) =>
