@@ -5,7 +5,16 @@ import { useAuth } from "@/context/AuthContext";
 interface Props { role?: string; children: React.ReactNode; }
 
 export default function ProtectedRoute({ role, children }: Props) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  // Attendre que Supabase Auth ait résolu la session initiale
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-emit-navy">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-white" />
+      </div>
+    );
+  }
 
   if (!user) return <Navigate to="/login" replace />;
 
