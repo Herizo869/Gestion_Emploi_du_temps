@@ -13,6 +13,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
 
@@ -66,53 +68,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             },
             OnTokenValidated = async context =>
             {
+                // Pas de requête sur profiles ici (évite de saturer le pool de connexions).
+                // Le rôle est déterminé directement depuis les claims JWT Supabase.
                 var sub = context.Principal?.FindFirst("sub")?.Value;
+                var emailClaim = context.Principal?.FindFirst("email")?.Value ?? "";
+                var identity = (ClaimsIdentity)context.Principal!.Identity!;
+
+                identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, sub ?? Guid.NewGuid().ToString()));
+                identity.AddClaim(new Claim(ClaimTypes.Email, emailClaim));
+                identity.AddClaim(new Claim(ClaimTypes.Name, emailClaim));
+
+                var isAdmin = emailClaim == "miaroandriamanalintsoa007@gmail.com" || emailClaim == "herizoandrian8@gmail.com";
+                identity.AddClaim(new Claim(ClaimTypes.Role, isAdmin ? "Admin" : "Enseignant"));
+
+                // Une seule requête légère pour lier l'enseignant (utilisé par EDT/me, cours/me, etc.)
                 try
                 {
-                    if (Guid.TryParse(sub, out var supabaseUserId))
-                    {
-                        var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-                        var profile = await db.Profiles.AsNoTracking()
-                            .FirstOrDefaultAsync(p => p.Id == supabaseUserId);
-
-                        if (profile is not null)
-                        {
-                            var identity = (ClaimsIdentity)context.Principal!.Identity!;
-                            var roleClaim = profile.Role == "admin" ? "Admin" : "Enseignant";
-                            identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, profile.Id.ToString()));
-                            identity.AddClaim(new Claim(ClaimTypes.Email, profile.Email));
-                            identity.AddClaim(new Claim(ClaimTypes.Name, profile.FullName ?? profile.Email));
-                            identity.AddClaim(new Claim(ClaimTypes.Role, roleClaim));
-
-                            var enseignant = await db.Enseignants.AsNoTracking()
-                                .FirstOrDefaultAsync(e => e.Email == profile.Email);
-                            if (enseignant is not null)
-                                identity.AddClaim(new Claim("enseignantId", enseignant.Id.ToString()));
-
-                            return;
-                        }
-                    }
+                    var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                    var enseignant = await db.Enseignants.AsNoTracking()
+                        .FirstOrDefaultAsync(e => e.Email == emailClaim);
+                    if (enseignant is not null)
+                        identity.AddClaim(new Claim("enseignantId", enseignant.Id.ToString()));
                 }
-                catch (Exception ex)
+                catch
                 {
-                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogWarning(ex, "Erreur OnTokenValidated, fallback sur les claims JWT");
-                }
-
-                // Fallback : utiliser les claims du JWT directement
-                var emailClaim = context.Principal?.FindFirst("email")?.Value ?? "";
-                var fallbackIdentity = (ClaimsIdentity)context.Principal!.Identity!;
-                fallbackIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, sub ?? Guid.NewGuid().ToString()));
-                fallbackIdentity.AddClaim(new Claim(ClaimTypes.Email, emailClaim));
-                fallbackIdentity.AddClaim(new Claim(ClaimTypes.Name, emailClaim));
-                // Admin détecté par email (temporaire, à remplacer)
-                var fallbackRole = emailClaim == "miaroandriamanalintsoa007@gmail.com" ? "Admin" : "Enseignant";
-                fallbackIdentity.AddClaim(new Claim(ClaimTypes.Role, fallbackRole));
-
-                if (Guid.TryParse(sub, out _))
-                {
-                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogInformation("Fallback auth réussi pour {Email} (rôle: {Role})", emailClaim, fallbackRole);
+                    // Ignorer — le claim enseignantId est optionnel
                 }
             },
         };

@@ -27,8 +27,17 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder b)
     {
         // Table gérée par Supabase/trigger — EF ne doit pas essayer de la créer/migrer
-        b.Entity<UserProfile>().ToTable("profiles", t => t.ExcludeFromMigrations());
-        b.Entity<UserProfile>().HasKey(p => p.Id);
+        // Les colonnes Supabase sont en minuscules/snake_case, pas en PascalCase
+        b.Entity<UserProfile>(e =>
+        {
+            e.ToTable("profiles", t => t.ExcludeFromMigrations());
+            e.HasKey(p => p.Id);
+            e.Property(p => p.Id).HasColumnName("id");
+            e.Property(p => p.Email).HasColumnName("email");
+            e.Property(p => p.FullName).HasColumnName("full_name");
+            e.Property(p => p.AvatarUrl).HasColumnName("avatar_url");
+            e.Property(p => p.Role).HasColumnName("role");
+        });
 
         b.Entity<User>().HasIndex(u => u.Email).IsUnique();
         b.Entity<User>()
