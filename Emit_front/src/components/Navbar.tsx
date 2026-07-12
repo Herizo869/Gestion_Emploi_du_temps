@@ -64,7 +64,11 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
   const ref = useRef<HTMLDivElement>(null);
   const { notifications } = useData();
 
-  const initials = `${user?.prenom[0] ?? ""}${user?.nom[0] ?? ""}`.toUpperCase();
+  const nameParts = (user?.full_name ?? user?.email ?? "?").split(" ");
+  const initials = (nameParts.length >= 2
+    ? nameParts[0][0] + nameParts[nameParts.length - 1][0]
+    : (user?.full_name ?? user?.email ?? "?")[0]
+  ).toUpperCase();
   const unread = notifications.filter((n) => !n.lu).length;
 
   useEffect(() => {
@@ -256,14 +260,14 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
                 {initials}
               </span>
               <span className="hidden text-sm font-medium text-emit-navy sm:inline">
-                {user?.prenom}
+                {user?.full_name?.split(" ")[0] ?? user?.email?.split("@")[0]}
               </span>
               <ChevronDown className={`h-3.5 w-3.5 text-slate-500 transition-transform ${openUser ? "rotate-180" : ""}`} />
             </button>
             {openUser && (
               <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-emit-navy/10 bg-white shadow-xl">
                 <div className="bg-gradient-to-br from-emit-navy to-emit-navy-dark px-4 py-3 text-white">
-                  <p className="text-sm font-semibold">{user?.prenom} {user?.nom}</p>
+                  <p className="text-sm font-semibold">{user?.full_name ?? user?.email?.split("@")[0]}</p>
                   <p className="truncate text-xs text-emit-sky">{user?.email}</p>
                 </div>
                 <ul className="p-1.5">

@@ -1,16 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
-import { Save, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock, BookOpen } from "lucide-react";
+import { Save, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { useData } from "@/context/DataContext";
-import { apiDisposEnseignant, apiSaveDisponibilites, type Dispo, type ConflitDispo } from "@/lib/api";
+import { apiDisposEnseignant, apiSaveDisponibilites, type Dispo } from "@/lib/api";
 import type { Enseignant } from "@/types";
+
 const CRENEAUX = [
-  "07h00 - 08h00", "08h00 - 09h00", "09h00 - 10h00", "10h00 - 11h00", "11h00 - 12h00"
-  ,"14h00 - 15h00", "15h00 - 16h00", "16h00 - 17h00", "17h00 - 18h00",
+  "07h00 - 08h00",
+  "08h00 - 09h00",
+  "09h00 - 10h00",
+  "10h00 - 11h00",
+  "11h00 - 12h00",
+  "14h00 - 15h00",
+  "15h00 - 16h00",
+  "16h00 - 17h00",
+  "17h00 - 18h00",
 ] as const;
+
 const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"] as const;
+
 const NB_CRENEAUX = CRENEAUX.length;
 const NB_JOURS = JOURS.length;
 
@@ -18,7 +28,7 @@ type State = "dispo" | "indispo" | "vide";
 
 function disposToGrid(dispos: Dispo[]): State[][] {
   const grid: State[][] = Array.from({ length: NB_CRENEAUX }, () =>
-    Array(NB_JOURS).fill("vide" as State)
+    Array(NB_JOURS).fill("vide")
   );
   dispos.forEach((d) => {
     const row = CRENEAUX.indexOf(d.creneau as typeof CRENEAUX[number]);
@@ -31,225 +41,250 @@ function disposToGrid(dispos: Dispo[]): State[][] {
 }
 
 function countHours(grid: State[][]): number {
-  return grid.flat().filter((v) => v === "dispo").length * 1;
+  return grid.flat().filter((v) => v === "dispo").length;
 }
 
 export default function AdminDisponibilites() {
-  const { enseignants, semestres, cours, refresh } = useData();
+  const { enseignants, semestres, refresh } = useData();
   const [selectedId, setSelectedId] = useState<string>("");
   const [semestreId, setSemestreId] = useState<string>("");
-  const [coursId, setCoursId] = useState<string>("");
   const [grid, setGrid] = useState<State[][]>(() =>
-    Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State))
+    Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide"))
   );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [changed, setChanged] = useState(false);
   const [loadingTeacher, setLoadingTeacher] = useState(false);
-  const [conflits, setConflits] = useState<ConflitDispo[]>([]);
 
-  // Cours enseignés par l'enseignant sélectionné
-  const coursEnseignant = cours.filter((c) => c.enseignantIds.includes(selectedId));
-
+  // Sélection automatique du premier enseignant
   useEffect(() => {
     if (enseignants.length > 0 && !selectedId) {
       setSelectedId(enseignants[0].id);
     }
   }, [enseignants, selectedId]);
 
+  // Sélection automatique du semestre
   useEffect(() => {
     if (semestres.length > 0 && !semestreId) {
-      const brouillon = semestres.find(s => s.statut === "brouillon");
-      const publie = [...semestres].reverse().find(s => s.statut === "publie");
-      setSemestreId((brouillon ?? publie ?? semestres[semestres.length - 1]).id);
+      const publie = [...semestres].reverse().find((s) => s.statut === "publie");
+      setSemestreId((publie ?? semestres[semestres.length - 1]).id);
     }
   }, [semestres, semestreId]);
 
-  // Quand l'enseignant change, on sélectionne automatiquement son premier cours
+  // Chargement des disponibilités
+  const loadDispos = useCallback(
+    async (enseignantId: string, semId: string) => {
+      if (!enseignantId || !semId) return;
+      setLoadingTeacher(true);
+      setError(null);
+      try {
+        const data = await apiDisposEnseignant(enseignantId, semId);
+        setGrid(
+          data.length > 0
+            ? disposToGrid(data)
+            : Array.from({ length: NB_CRENEAUX }, () =>
+                Array(NB_JOURS).fill("vide")
+              )
+        );
+      } catch (e: any) {
+        setError(e.message ?? "Erreur chargement disponibilités");
+      } finally {
+        setLoadingTeacher(false);
+        setChanged(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
-    if (coursEnseignant.length > 0 && !coursEnseignant.some(c => c.id === coursId)) {
-      setCoursId(coursEnseignant[0].id);
-    } else if (coursEnseignant.length === 0) {
-      setCoursId("");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, cours]);
+    loadDispos(selectedId, semestreId);
+  }, [selectedId, semestreId, loadDispos]);
 
-  const loadDispos = useCallback(async (enseignantId: string, semId: string, crsId: string) => {
-    if (!enseignantId || !semId || !crsId) {
-      setGrid(Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State)));
-      return;
-    }
-    setLoadingTeacher(true);
-    setError(null);
-    try {
-      const data = await apiDisposEnseignant(enseignantId, semId, crsId);
-      setGrid(data.length > 0 ? disposToGrid(data) : Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State)));
-    } catch (e: any) {
-      setError(e.message ?? "Erreur lors du chargement des disponibilités");
-      setGrid(Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State)));
-    } finally {
-      setLoadingTeacher(false);
-      setChanged(false);
-    }
-  }, []);
-
-  useEffect(() => { loadDispos(selectedId, semestreId, coursId); }, [selectedId, semestreId, coursId, loadDispos]);
-
+  // Changement cellule grille
   const toggle = (row: number, col: number) => {
     setGrid((prev) => {
-      const newGrid = prev.map((r) => [...r]);
-      newGrid[row][col] = newGrid[row][col] === "vide" ? "dispo" : newGrid[row][col] === "dispo" ? "indispo" : "vide";
-      return newGrid;
+      const copy = prev.map((r) => [...r]);
+      copy[row][col] =
+        copy[row][col] === "vide"
+          ? "dispo"
+          : copy[row][col] === "dispo"
+          ? "indispo"
+          : "vide";
+      return copy;
     });
     setChanged(true);
     setSaved(false);
   };
 
+  // Sauvegarde
   const handleSave = async () => {
-    if (!selectedId) return setError("Veuillez sélectionner un enseignant");
-    if (!semestreId) return setError("Veuillez sélectionner un semestre");
-    if (!coursId) return setError("Cet enseignant n'a aucun cours associé");
+    if (!selectedId) {
+      setError("Veuillez sélectionner un enseignant");
+      return;
+    }
+    if (!semestreId) {
+      setError("Veuillez sélectionner un semestre");
+      return;
+    }
+
     setSaving(true);
     setError(null);
+
     try {
       const disponibilites: Dispo[] = [];
       for (let row = 0; row < NB_CRENEAUX; row++) {
         for (let col = 0; col < NB_JOURS; col++) {
           const state = grid[row][col];
           if (state !== "vide") {
-            disponibilites.push({ jour: JOURS[col], creneau: CRENEAUX[row], estDisponible: state === "dispo", estIndisponible: state === "indispo" });
+            disponibilites.push({
+              jour: JOURS[col],
+              creneau: CRENEAUX[row],
+              estDisponible: state === "dispo",
+              estIndisponible: state === "indispo",
+            });
           }
         }
       }
-      const res = await apiSaveDisponibilites(selectedId, semestreId, coursId, disponibilites);
-      setConflits(res.conflits ?? []);
+
+      await apiSaveDisponibilites(selectedId, semestreId, undefined, disponibilites);
+
       setSaved(true);
       setChanged(false);
       await refresh();
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
       setError(e.message ?? "Erreur lors de la sauvegarde");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const totalHours = countHours(grid);
   const current = enseignants.find((e) => e.id === selectedId);
-  const coursActuel = coursEnseignant.find((c) => c.id === coursId);
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Disponibilités des Enseignants</h1>
-          <p className="text-sm text-slate-500">Gestion des disponibilités hebdomadaires par cours</p>
+          <h1 className="text-2xl font-bold text-slate-900">Disponibilités</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Gérez les disponibilités et indisponibilités des enseignants par créneau
+          </p>
         </div>
-        <Button 
-          leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 
-          onClick={handleSave}
-          disabled={saving || loadingTeacher || !coursId}
-        >
-          {saving ? "Sauvegarde..." : "Sauvegarder"}
-        </Button>
+        <div className="flex items-center gap-3">
+          {changed && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 animate-pulse">
+              <AlertTriangle className="h-3 w-3" /> Modifications non enregistrées
+            </span>
+          )}
+          <Button
+            leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Enregistrement..." : "Enregistrer"}
+          </Button>
+        </div>
       </div>
 
-      {saved && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          <CheckCircle2 className="h-4 w-4 shrink-0" /> ✓ Disponibilités enregistrées avec succès
-        </div>
-      )}
-      {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <XCircle className="h-4 w-4 shrink-0" /> {error}
-        </div>
-      )}
-      {conflits.length > 0 && (
-        <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          <div className="flex items-center gap-2 font-medium">
-            <AlertTriangle className="h-4 w-4 shrink-0" /> Conflit détecté entre plusieurs cours de cet enseignant
-          </div>
-          {conflits.map((c, i) => (
-            <p key={i} className="pl-6 text-xs">
-              {c.jour} {c.creneau} : <strong>{c.cours1}</strong> et <strong>{c.cours2}</strong> se chevauchent.
-            </p>
-          ))}
-        </div>
-      )}
-
+      {/* Filtres */}
       <Card>
         <CardBody className="space-y-4">
           <div className="flex flex-wrap items-center gap-4">
             <label className="text-sm font-medium text-slate-700">Enseignant :</label>
-            <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}
-              className="h-10 min-w-[240px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            <select
+              value={selectedId}
+              onChange={(e) => setSelectedId(e.target.value)}
+              className="h-10 min-w-[240px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20"
+            >
               {enseignants.map((e: Enseignant) => (
-                <option key={e.id} value={e.id}>{e.prenom} {e.nom} — {e.specialite}</option>
+                <option key={e.id} value={e.id}>
+                  {e.prenom} {e.nom} — {e.specialite}
+                </option>
               ))}
             </select>
-            <label className="text-sm font-medium text-slate-700">Cours :</label>
-            <select value={coursId} onChange={(e) => setCoursId(e.target.value)} disabled={coursEnseignant.length === 0}
-              className="h-10 min-w-[220px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 disabled:opacity-50">
-              {coursEnseignant.length === 0 && <option value="">Aucun cours associé</option>}
-              {coursEnseignant.map(c => (
-                <option key={c.id} value={c.id}>{c.intitule} — {c.niveauLibelle}</option>
-              ))}
-            </select>
+
             <label className="text-sm font-medium text-slate-700">Semestre :</label>
-            <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)}
-              className="h-10 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
-              {semestres.map(s => (
-                <option key={s.id} value={s.id}>{s.libelle} — {s.annee}</option>
+            <select
+              value={semestreId}
+              onChange={(e) => setSemestreId(e.target.value)}
+              className="h-10 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20"
+            >
+              {semestres.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.libelle} — {s.annee}
+                </option>
               ))}
             </select>
-            {current && <Badge tone={current.statut === "Permanent" ? "green" : current.statut === "Vacataire" ? "orange" : "purple"}>
-              {current.statut === "Permanent" ? "Permanent" : current.statut === "Vacataire" ? "Vacataire" : "Invité"}
-            </Badge>}
-            {changed && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 animate-pulse">
-                <AlertTriangle className="h-3 w-3" /> Modifications non enregistrées
-              </span>
+
+            {current && (
+              <Badge
+                tone={
+                  current.statut.toLowerCase() === "permanent"
+                    ? "green"
+                    : current.statut.toLowerCase() === "vacataire"
+                    ? "orange"
+                    : "purple"
+                }
+              >
+                {current.statut.toLowerCase() === "permanent"
+                  ? "Permanent"
+                  : current.statut.toLowerCase() === "vacataire"
+                  ? "Vacataire"
+                  : "Invité"}
+              </Badge>
             )}
           </div>
 
-          {coursActuel && (
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <BookOpen className="h-4 w-4 text-emit-sky" />
-              <span>Grille pour <strong>{coursActuel.intitule}</strong></span>
-              <Badge tone="blue">{coursActuel.niveauLibelle}</Badge>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-4 text-xs">
-            <span className="font-medium text-slate-600">Légende :</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-green-500 shadow-sm" /> Disponible</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-red-500 shadow-sm" /> Indisponible</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-slate-200 border border-slate-300" /> Non renseigné</span>
-            <span className="text-slate-400">·</span>
-            <span className="text-slate-500">Cliquez pour basculer</span>
+          {/* Légende */}
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-4 w-4 rounded border border-emit-sky bg-emit-light" /> Disponible
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-4 w-4 rounded border border-red-300 bg-red-50" /> Indisponible
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-4 w-4 rounded border border-slate-200 bg-white" /> Non défini
+            </span>
+            <span className="ml-auto font-medium text-emit-navy">
+              Total : <strong>{totalHours}h</strong> de disponibilité
+            </span>
           </div>
+        </CardBody>
+      </Card>
 
+      {/* Grille des disponibilités */}
+      <Card>
+        <CardHeader
+          title="Grille des disponibilités"
+          subtitle={current ? `${current.prenom} ${current.nom}` : "Sélectionnez un enseignant"}
+        />
+        <CardBody>
           {loadingTeacher ? (
             <div className="flex items-center justify-center py-16">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-emit-sky" />
-                <p className="text-sm text-slate-500">Chargement des disponibilités...</p>
-              </div>
+              <Loader2 className="h-8 w-8 animate-spin text-emit-sky" />
             </div>
-          ) : !coursId ? (
-            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
-              Cet enseignant n'a aucun cours associé — impossible de définir une disponibilité.
+          ) : !selectedId ? (
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+              <Clock className="h-12 w-12 mb-3" />
+              <p className="text-sm">Sélectionnez un enseignant pour voir ses disponibilités</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-              <table className="w-full min-w-[700px] border-collapse text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] border-collapse">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-10 bg-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-600 border-r border-slate-200">
-                      <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> Créneaux</div>
+                    <th className="sticky left-0 z-10 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                      Créneau
                     </th>
-                    {JOURS.map((jour, idx) => (
-                      <th key={jour} className={`px-3 py-3 text-center text-xs font-semibold border-b-2 ${idx === new Date().getDay() - 1 ? "bg-emit-light/60 text-emit-navy border-b-emit-sky" : "bg-slate-50 text-slate-600 border-b-slate-200"}`}>
+                    {JOURS.map((jour) => (
+                      <th
+                        key={jour}
+                        className="px-3 py-2 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200"
+                      >
                         {jour}
                       </th>
                     ))}
@@ -258,22 +293,39 @@ export default function AdminDisponibilites() {
                 <tbody>
                   {CRENEAUX.map((creneau, row) => (
                     <tr key={creneau} className="group">
-                      <td className="sticky left-0 z-10 bg-slate-50/90 px-3 py-2.5 text-xs font-mono text-slate-600 border-r border-slate-200 font-medium">{creneau}</td>
-                      {JOURS.map((_, col) => {
-                        const value = grid[row]?.[col] || "vide";
-                        const isDispo = value === "dispo";
-                        const isIndispo = value === "indispo";
+                      <td className="sticky left-0 z-10 bg-white px-3 py-2 text-xs font-medium text-slate-600 border-b border-slate-100 whitespace-nowrap">
+                        {creneau}
+                      </td>
+                      {JOURS.map((jour, col) => {
+                        const state = grid[row][col];
                         return (
-                          <td key={col} className="border border-slate-100 p-1">
-                            <button onClick={() => toggle(row, col)}
-                              className={`relative h-10 w-full rounded-lg border-2 transition-all duration-150 ${
-                                isDispo ? "bg-green-100 border-green-400 hover:bg-green-200 hover:border-green-500"
-                                : isIndispo ? "bg-red-100 border-red-400 hover:bg-red-200 hover:border-red-500"
-                                : "bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
+                          <td
+                            key={`${creneau}-${jour}`}
+                            className="px-1 py-1 border-b border-slate-100"
+                          >
+                            <button
+                              onClick={() => toggle(row, col)}
+                              className={`h-10 w-full rounded-lg border-2 transition-all duration-150 cursor-pointer ${
+                                state === "dispo"
+                                  ? "border-emit-sky bg-emit-light hover:bg-emit-sky/20"
+                                  : state === "indispo"
+                                  ? "border-red-300 bg-red-50 hover:bg-red-100"
+                                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                               }`}
-                              title={`${JOURS[col]} ${creneau}: ${isDispo ? "Disponible" : isIndispo ? "Indisponible" : "Non renseigné"}`}>
-                              {isDispo && <span className="absolute inset-0 flex items-center justify-center"><CheckCircle2 className="h-4 w-4 text-green-600" /></span>}
-                              {isIndispo && <span className="absolute inset-0 flex items-center justify-center"><XCircle className="h-4 w-4 text-red-600" /></span>}
+                              title={
+                                state === "dispo"
+                                  ? "Disponible — Cliquer pour rendre indisponible"
+                                  : state === "indispo"
+                                  ? "Indisponible — Cliquer pour réinitialiser"
+                                  : "Non défini — Cliquer pour rendre disponible"
+                              }
+                            >
+                              {state === "dispo" && (
+                                <CheckCircle2 className="mx-auto h-4 w-4 text-emit-sky" />
+                              )}
+                              {state === "indispo" && (
+                                <XCircle className="mx-auto h-4 w-4 text-red-400" />
+                              )}
                             </button>
                           </td>
                         );
@@ -284,45 +336,22 @@ export default function AdminDisponibilites() {
               </table>
             </div>
           )}
-          {changed && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              Modifications non enregistrées. Cliquez sur "Sauvegarder".
+
+          {error && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          {saved && (
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              Disponibilités enregistrées avec succès
             </div>
           )}
         </CardBody>
       </Card>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader title="Synthèse hebdomadaire" subtitle={current ? `${current.prenom} ${current.nom}${coursActuel ? " — " + coursActuel.intitule : ""}` : ""} />
-          <CardBody>
-            <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-green-400 to-green-600 text-2xl font-bold text-white shadow-md">{totalHours}h</div>
-              <div>
-                <p className="text-sm font-semibold text-slate-700">Heures disponibles</p>
-                <p className="text-xs text-slate-500">{grid.flat().filter((v) => v === "dispo").length} créneaux · {grid.flat().filter((v) => v === "indispo").length} indisponibilités</p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="Actions rapides" />
-          <CardBody>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => { setGrid(Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("dispo" as State))); setChanged(true); }}>
-                Tout disponible
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => { setGrid(Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State))); setChanged(true); }}>
-                Tout effacer
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => { if (selectedId) loadDispos(selectedId, semestreId, coursId); }}>
-                Recharger
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
-      </div>
     </div>
   );
 }

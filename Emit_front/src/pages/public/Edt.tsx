@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import WeeklyGrid from "@/components/WeeklyGrid";
-import { niveaux, allEdtSlots } from "@/data/mock";
 import type { SlotEDT, CoursType, Niveau, Semestre } from "@/types";
 import { apiNiveaux, apiSemestres, apiEdt, apiDownloadPdf } from "@/lib/api";
 
@@ -45,11 +44,18 @@ export default function PublicEdt() {
           apiNiveaux(),
           apiSemestres(),
         ]);
-        setNiveaux(niveauxData);
-        if (niveauxData.length > 0) {
-          setActiveNiveau(niveauxData[0].libelle);
-          if (niveauxData[0].filieres.length > 0) {
-            setActiveFiliere(niveauxData[0].filieres[0].libelle);
+        
+        // Trier les niveaux dans l'ordre chronologique (L1, L2, L3, M1, M2)
+        const order: Record<string, number> = { L1: 1, L2: 2, L3: 3, M1: 4, M2: 5 };
+        const sortedNiveaux = [...niveauxData].sort(
+          (a, b) => (order[a.libelle] ?? 9) - (order[b.libelle] ?? 9)
+        );
+        
+        setNiveaux(sortedNiveaux);
+        if (sortedNiveaux.length > 0) {
+          setActiveNiveau(sortedNiveaux[0].libelle);
+          if (sortedNiveaux[0].filieres.length > 0) {
+            setActiveFiliere(sortedNiveaux[0].filieres[0].libelle);
           }
         }
         const publie = semestresData.find(s => s.statut === "publie") ?? null;
@@ -64,8 +70,8 @@ export default function PublicEdt() {
     })();
   }, []);
   // ─── State ────────────────────────────────────────────────────
-  const [activeNiveau, setActiveNiveau] = useState("L3");
-  const [activeFiliere, setActiveFiliere] = useState("INFO");
+  const [activeNiveau, setActiveNiveau] = useState("");
+  const [activeFiliere, setActiveFiliere] = useState("");
   const [typeFilter, setTypeFilter] = useState<"ALL" | CoursType>("ALL");
   const [week, setWeek] = useState(19);
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,6 +131,17 @@ export default function PublicEdt() {
     plannerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-emit-navy text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-blue-500" />
+          <p className="text-sm font-medium text-white/70">Chargement de l'emploi du temps...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-emit-navy">
 
@@ -163,16 +180,16 @@ export default function PublicEdt() {
           {/* Titre + infos */}
           <div className="mt-8 grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="max-w-3xl">
-            <div className="flex items-center gap-2 text-emit-sky/80 text-sm font-medium mb-2">
-              <CalendarDays className="h-4 w-4" />
-              Emploi du temps — Semaine {week} · Semestre 1 — 2024-2025
-            </div>
-            <h1 className="max-w-2xl text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
-              Emploi du temps {activeNiveau} {activeFiliere}
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-white/70 sm:text-base">
-              Consultez les emplois du temps par niveau et filière
-            </p>
+              <div className="flex items-center gap-2 text-emit-sky/80 text-sm font-medium mb-2">
+                <CalendarDays className="h-4 w-4" />
+                Emploi du temps — Semaine {week} · Semestre 1 — 2024-2025
+              </div>
+              <h1 className="max-w-2xl text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
+                Emploi du temps {activeNiveau} {activeFiliere}
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-white/70 sm:text-base">
+                Consultez les emplois du temps par niveau et filière
+              </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-stretch">

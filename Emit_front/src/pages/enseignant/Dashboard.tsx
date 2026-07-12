@@ -15,7 +15,7 @@ export default function EnsDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { edt, cours, notifications } = useData();
-  const myId = user?.enseignantId ?? "";
+  const myId = user?.enseignantId ?? user?.id ?? "";
   const myCours = cours.filter(c => c.enseignantIds.includes(myId));
 
   // Statistiques réelles
@@ -50,12 +50,13 @@ export default function EnsDashboard() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-emit-navy to-emit-sky text-base font-bold text-white shadow-md">
-                {user?.prenom?.[0]}{user?.nom?.[0]}
+                {(user?.full_name ?? user?.email ?? "?").split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()}
+
               </div>
               <div>
-                <h1 className="text-xl font-bold">Bonjour {user?.prenom} {user?.nom}</h1>
+                <h1 className="text-xl font-bold">Bonjour {user?.full_name?.split(" ")[0] ?? user?.email?.split("@")[0]}</h1>
                 <p className="text-sm text-slate-500">
-                  {user?.specialite} · <Badge tone="green">{user?.statut}</Badge>
+                  {user?.specialite ?? "Enseignant"} · <Badge tone="green">{user?.statut ?? "actif"}</Badge>
                 </p>
               </div>
             </div>

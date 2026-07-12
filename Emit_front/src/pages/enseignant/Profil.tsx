@@ -17,9 +17,10 @@ function strength(p: string): number {
 
 export default function EnsProfil() {
   const { user, setUser } = useAuth();
-  const [prenom, setPrenom] = useState(user?.prenom ?? "");
-  const [nom, setNom] = useState(user?.nom ?? "");
+  const [fullName, setFullName] = useState(user?.full_name ?? user?.prenom ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+  const [specialite, setSpecialite] = useState(user?.specialite ?? "");
+  const [statut, setStatut] = useState(user?.statut ?? "permanent");
 
   const [savedProfile, setSavedProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -35,13 +36,14 @@ export default function EnsProfil() {
   const colors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-green-500"];
 
   const handleSaveProfile = async () => {
-    if (!prenom || !nom || !email) return setProfileError("Tous les champs sont requis");
+    if (!fullName || !email) return setProfileError("Nom complet et email requis");
     setSavingProfile(true);
     setProfileError(null);
     try {
-      const updated = await apiUpdateProfile({ prenom, nom, email });
+      const names = fullName.split(" ");
+      const updated = await apiUpdateProfile({ prenom: names[0] ?? fullName, nom: names.slice(1).join(" ") || fullName, email });
       if (setUser && user) {
-        setUser({ ...user, ...updated });
+        setUser({ ...user, ...updated, full_name: fullName });
       }
       setSavedProfile(true);
       setTimeout(() => setSavedProfile(false), 3000);
@@ -78,12 +80,12 @@ export default function EnsProfil() {
       <Card>
         <CardBody className="flex items-center gap-4">
           <div className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-emit-navy to-emit-sky text-lg font-bold text-white shadow-md">
-            {user?.prenom?.[0]}{user?.nom?.[0]}
+            {(user?.full_name ?? user?.email ?? "?").split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()}
           </div>
           <div>
-            <p className="text-lg font-semibold">{user?.prenom} {user?.nom}</p>
+            <p className="text-lg font-semibold">{user?.full_name ?? user?.email?.split("@")[0]}</p>
             <p className="text-sm text-slate-500">
-              {user?.role === "admin" ? "Administrateur" : "Enseignant"} · <Badge tone="green">{user?.statut ?? "Permanent"}</Badge>
+              {user?.role === "admin" ? "Administrateur" : "Enseignant"} · <Badge tone="green">{user?.statut ?? "actif"}</Badge>
             </p>
           </div>
         </CardBody>
@@ -104,12 +106,20 @@ export default function EnsProfil() {
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Prénom" value={prenom} onChange={e => setPrenom(e.target.value)} />
-            <Input label="Nom" value={nom} onChange={e => setNom(e.target.value)} />
+            <Input label="Nom complet" value={fullName} onChange={e => setFullName(e.target.value)} placeholder={user?.full_name ?? ""} />
             <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+            <Input label="Spécialité" value={specialite} onChange={e => setSpecialite(e.target.value)} />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Statut</label>
+              <select value={statut} onChange={e => setStatut(e.target.value)} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
+                <option value="permanent">Permanent</option>
+                <option value="vacataire">Vacataire</option>
+                <option value="invite">Invité</option>
+              </select>
+            </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => { setPrenom(user?.prenom ?? ""); setNom(user?.nom ?? ""); setEmail(user?.email ?? ""); }}>
+            <Button variant="outline" onClick={() => { setFullName(user?.full_name ?? user?.prenom ?? ""); setEmail(user?.email ?? ""); setSpecialite(user?.specialite ?? ""); setStatut(user?.statut ?? "permanent"); }}>
               Annuler
             </Button>
             <Button onClick={handleSaveProfile} disabled={savingProfile}>
