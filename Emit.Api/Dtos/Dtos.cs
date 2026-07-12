@@ -11,6 +11,8 @@ public class EnseignantDto
     [Required, EmailAddress] public string Email { get; set; } = null!;
     public string Specialite { get; set; } = "";
     public StatutEnseignant Statut { get; set; }
+    /// <summary>ID de l'utilisateur Supabase Auth associé</summary>
+    public string? SupabaseAuthUserId { get; set; }
     public int NbCours { get; set; }
     /// <summary>Total des heures disponibles cette semaine (depuis les disponibilités)</summary>
     public double HeuresDisponibles { get; set; }

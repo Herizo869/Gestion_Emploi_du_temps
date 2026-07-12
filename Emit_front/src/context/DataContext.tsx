@@ -43,7 +43,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     setLoading(true); setError(null);
     try {
-      const safe = <T,>(p: Promise<T>, fb: T): Promise<T> => p.catch(() => fb);
+      const safe = <T,>(p: Promise<T>, fb: T): Promise<T> =>
+        p.catch((err) => {
+          console.error("[DataContext] Erreur de chargement :", err);
+          return fb;
+        });
       const [ens, sal, cou, niv, sem, ed, no, jo] = await Promise.all([
         safe(apiEnseignants(), []),
         safe(apiSalles(), []),

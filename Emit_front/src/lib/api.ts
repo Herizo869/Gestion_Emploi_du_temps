@@ -5,11 +5,13 @@ import type {
 import { supabase } from "@/lib/supabase";
 
 const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "http://localhost:5000").replace(/\/$/, "");
+const TOKEN_KEY = "emit-token";
 
-async function getAccessToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token ?? null;
-}
+export const getToken = () => localStorage.getItem(TOKEN_KEY);
+export const setToken = (t: string | null) => {
+  if (t) localStorage.setItem(TOKEN_KEY, t);
+  else localStorage.removeItem(TOKEN_KEY);
+};
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);

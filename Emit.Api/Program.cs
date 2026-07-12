@@ -21,7 +21,7 @@ var cfg = builder.Configuration;
 // --- DB ---
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(cfg.GetConnectionString("Default"),
-        npgsqlOptions => npgsqlOptions.CommandTimeout(120)));
+        npgsqlOptions => npgsqlOptions.CommandTimeout(30)));
 
 // Désactiver les logs SQL verbose
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
@@ -30,6 +30,9 @@ builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogL
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEdtGeneratorService, EdtGeneratorService>();
+builder.Services.AddScoped<ISupabaseAdminService, SupabaseAdminService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient();
 
 // --- JWT (validation Supabase Auth via JWKS) ---
 var supabaseUrl = cfg["Supabase:Url"]!;
