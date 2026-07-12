@@ -59,116 +59,15 @@ public class EdtGeneratorService : IEdtGeneratorService
         Dictionary<(Guid ens, Guid cours), List<(Jour jour, TimeOnly debut, TimeOnly fin)>> indispos)>
         ChargerDisponibilitesAsync(Guid semestreId)
     {
-
-        Jour.Lundi,
-
-        Jour.Mardi,
-
-        Jour.Mercredi,
-
-        Jour.Jeudi,
-
-        Jour.Vendredi
-
-    };
-
-
-
-
-
-    private static bool TryParseCreneau(
-
-        string creneau,
-
-        out TimeOnly debut,
-
-        out TimeOnly fin
-
-    )
-    {
-
-        debut = default;
-
-        fin = default;
-
-
-
-        var parts =
-            creneau.Split(
-                '-',
-                StringSplitOptions.TrimEntries
-            );
-
-
-
-        if(parts.Length != 2)
-            return false;
-
-
-
-
-        return
-
-        TimeOnly.TryParse(
-            parts[0].Replace(
-                'h',
-                ':'
-            ),
-            out debut)
-
-        &&
-
-        TimeOnly.TryParse(
-            parts[1].Replace(
-                'h',
-                ':'
-            ),
-            out fin);
-
-    }
-
-
-
-
-
-    // Charger indisponibilités enseignants
-
-    private async Task
-    <Dictionary<Guid,List<(Jour jour,TimeOnly debut,TimeOnly fin)>>>
-    ChargerIndisponibilitesAsync(Guid semestreId)
-    {
-
-
-        var indispos =
-            await _db.Disponibilites
-
-            .Where(d =>
-                d.SemestreId == semestreId
-                &&
-                d.EstIndisponible)
-
         var dbDispos = await _db.Disponibilites
             .Where(d => d.SemestreId == semestreId)
             .ToListAsync();
 
-
-
-        var result =
-            new Dictionary
-            <Guid,List<(Jour,TimeOnly,TimeOnly)>>();
-
-
-
-        foreach(var d in indispos)
         var parCoursDispos   = new Dictionary<(Guid, Guid), List<(Jour, TimeOnly, TimeOnly)>>();
         var parCoursIndispos = new Dictionary<(Guid, Guid), List<(Jour, TimeOnly, TimeOnly)>>();
 
         foreach (var d in dbDispos)
         {
-
-            if(!Enum.TryParse<Jour>(
-                d.Jour,
-                out var jour))
             if (!Enum.TryParse<Jour>(d.Jour, out var jourEnum)) continue;
             if (!TryParseCreneau(d.Creneau, out var debut, out var fin)) continue;
 
@@ -276,18 +175,6 @@ public class EdtGeneratorService : IEdtGeneratorService
                 continue;
             }
 
-
-
-            if(!TryParseCreneau(
-                d.Creneau,
-                out var debut,
-                out var fin))
-                continue;
-
-
-
-            if(!result.ContainsKey(
-                d.EnseignantId))
             // Salles compatibles avec le type de cours
             var sallesCompat = salles.Where(s =>
                 (c.Type == CoursType.TP  && s.Type == TypeSalle.TP) ||
@@ -298,25 +185,6 @@ public class EdtGeneratorService : IEdtGeneratorService
 
             foreach (var jour in Jours)
             {
-                result[d.EnseignantId] =
-                    new();
-            }
-
-
-
-            result[d.EnseignantId]
-            .Add(
-                (
-                    jour,
-                    debut,
-                    fin
-                )
-            );
-
-        }
-
-
-
                 foreach (var (debut, fin) in Creneaux)
                 {
                     if (placees >= seancesNecessaires) break;
@@ -373,333 +241,86 @@ public class EdtGeneratorService : IEdtGeneratorService
 
     public async Task<List<ConflitDto>> DetectConflitsAsync(Guid semestreId)
     {
-
-        for(int j = i + 1; j < slots.Count; j++)
-        {
-
-            var a = slots[i];
-
-            var b = slots[j];
-
-
-
-            if(
-                a.EnseignantId == b.EnseignantId
-
-                &&
-
-                a.Jour == b.Jour
-
-                &&
-
-                a.HeureDebut < b.HeureFin
-
-                &&
-
-                b.HeureDebut < a.HeureFin
-            )
-            {
-
-                conflits.Add(
-                    new ConflitDto
-                    {
-
-                        Id =
-                        $"E-{a.Id}-{b.Id}",
-
-
-                        Type =
-                        "Enseignant",
-
-
-                        Description =
-                        $"{a.Enseignant.Prenom} {a.Enseignant.Nom} possède deux cours le {a.Jour} entre {a.HeureDebut:HH:mm} et {a.HeureFin:HH:mm}",
-
-
-                        Date =
-                        DateTime.UtcNow
-
-                    }
-                );
-
-            }
-
-        }
-
-    }
-
-
-
-
-
-
-    // =====================================================
-    // CONFLIT SALLE
-    // Deux cours dans la même salle
-    // =====================================================
-
-
-    for(int i = 0; i < slots.Count; i++)
-    {
-
-        for(int j = i + 1; j < slots.Count; j++)
-        {
-
-            var a = slots[i];
-
-            var b = slots[j];
-
-
-
-            if(
-                a.SalleId == b.SalleId
-
-                &&
-
-                a.Jour == b.Jour
-
-                &&
-
-                a.HeureDebut < b.HeureFin
-
-                &&
-
-                b.HeureDebut < a.HeureFin
-            )
-            {
-
-                conflits.Add(
-                    new ConflitDto
-                    {
-
-                        Id =
-                        $"S-{a.Id}-{b.Id}",
-
-
-                        Type =
-                        "Salle",
-
-
-                        Description =
-                        $"La salle {a.Salle.Numero} est utilisée deux fois le {a.Jour} entre {a.HeureDebut:HH:mm} et {a.HeureFin:HH:mm}",
-
-
-                        Date =
-                        DateTime.UtcNow
-
-                    }
-                );
-
-            }
-
-        }
-
-    }
-
-
-
-
-
-
-    // =====================================================
-    // CONFLIT GROUPE
-    // Même niveau + filière au même moment
-    // =====================================================
-
-
-    for(int i = 0; i < slots.Count; i++)
-    {
-
-        for(int j = i + 1; j < slots.Count; j++)
-        {
-
-            var a = slots[i];
-
-            var b = slots[j];
-
-
-
-            if(
-
-                a.NiveauId == b.NiveauId
-
-                &&
-
-                a.FiliereId == b.FiliereId
-
-
-                &&
-
-                a.Jour == b.Jour
-
-
-                &&
-
-                a.HeureDebut < b.HeureFin
-
-
-                &&
-
-                b.HeureDebut < a.HeureFin
-
-            )
-            {
-
-                conflits.Add(
-                    new ConflitDto
-                    {
-
-                        Id =
-                        $"G-{a.Id}-{b.Id}",
-
-
-                        Type =
-                        "Groupe",
-
-
-                        Description =
-                        $"Le groupe {a.Niveau?.Libelle} possède deux cours simultanés le {a.Jour} ({a.HeureDebut:HH:mm}-{a.HeureFin:HH:mm})",
-
-
-                        Date =
-                        DateTime.UtcNow
-
-                    }
-                );
-
-            }
-
-        }
-
-    }
-
-
-
-
-
-
-    // =====================================================
-    // CONFLIT DISPONIBILITE ENSEIGNANT
-    // =====================================================
-
-
-    var indisponibilites =
-        await ChargerIndisponibilitesAsync(
-            semestreId
-        );
-
-
-
-
-    foreach(var slot in slots)
-    {
-
-        if(
-            EstIndisponible(
-
-                indisponibilites,
-
-                slot.EnseignantId,
-
-                slot.Jour,
-
-                slot.HeureDebut,
-
-                slot.HeureFin
-
-            )
-        )
-        {
-
-            conflits.Add(
-                new ConflitDto
-                {
-
-                    Id =
-                    $"I-{slot.Id}",
-
-
-                    Type =
-                    "Indisponibilite",
-
-
-                    Description =
-                    $"{slot.Enseignant.Prenom} {slot.Enseignant.Nom} est planifié alors qu'il est indisponible le {slot.Jour} à {slot.HeureDebut:HH:mm}",
-
-
-                    Date =
-                    DateTime.UtcNow
-
-                }
-            );
-
-        }
-
-    }
-
-
-
-
-    return conflits;
-
-}
-    private static bool EstIndisponible(
-        Dictionary<Guid,List<(Jour jour,TimeOnly debut,TimeOnly fin)>> indisponibilites,
-        Guid enseignantId,
-        Jour jour,
-        TimeOnly debut,
-        TimeOnly fin
-    )
-    {
-        if(!indisponibilites.TryGetValue(
-            enseignantId,
-            out var indispos))
-            return false;
-
-        return indispos.Any(d =>
-            d.jour == jour &&
-            debut < d.fin &&
-            d.debut < fin
-        );
         var slots = await _db.Slots
             .Where(s => s.SemestreId == semestreId)
             .Include(s => s.Enseignant)
             .Include(s => s.Salle)
+            .Include(s => s.Niveau)
             .ToListAsync();
 
         var conflits = new List<ConflitDto>();
 
-        // Conflit enseignant
-        foreach (var g in slots
-            .GroupBy(s => new { s.EnseignantId, s.Jour, s.HeureDebut })
-            .Where(g => g.Count() > 1))
+        // ─── Conflit ENSEIGNANT ────────────────────────────────────────────────
+        for (int i = 0; i < slots.Count; i++)
         {
-            var en = g.First().Enseignant;
-            conflits.Add(new ConflitDto
+            for (int j = i + 1; j < slots.Count; j++)
             {
-                Id          = $"E-{g.Key.EnseignantId}-{g.Key.Jour}-{g.Key.HeureDebut}",
-                Type        = "Enseignant",
-                Description = $"{en.Prenom[0]}. {en.Nom} planifié {g.Count()} fois le {g.Key.Jour} à {g.Key.HeureDebut:HH\\:mm}",
-                Date        = DateTime.UtcNow,
-            });
+                var a = slots[i];
+                var b = slots[j];
+                if (a.EnseignantId == b.EnseignantId
+                    && a.Jour == b.Jour
+                    && a.HeureDebut < b.HeureFin
+                    && b.HeureDebut < a.HeureFin)
+                {
+                    conflits.Add(new ConflitDto
+                    {
+                        Id          = $"E-{a.Id}-{b.Id}",
+                        Type        = "Enseignant",
+                        Description = $"{a.Enseignant.Prenom} {a.Enseignant.Nom} possède deux cours le {a.Jour} entre {a.HeureDebut:HH:mm} et {a.HeureFin:HH:mm}",
+                        Date        = DateTime.UtcNow,
+                    });
+                }
+            }
         }
 
-        // Conflit salle
-        foreach (var g in slots
-            .GroupBy(s => new { s.SalleId, s.Jour, s.HeureDebut })
-            .Where(g => g.Count() > 1))
+        // ─── Conflit SALLE ─────────────────────────────────────────────────────
+        for (int i = 0; i < slots.Count; i++)
         {
-            var sa = g.First().Salle;
-            conflits.Add(new ConflitDto
+            for (int j = i + 1; j < slots.Count; j++)
             {
-                Id          = $"S-{g.Key.SalleId}-{g.Key.Jour}-{g.Key.HeureDebut}",
-                Type        = "Salle",
-                Description = $"Salle {sa.Numero} occupée {g.Count()} fois le {g.Key.Jour} à {g.Key.HeureDebut:HH\\:mm}",
-                Date        = DateTime.UtcNow,
-            });
+                var a = slots[i];
+                var b = slots[j];
+                if (a.SalleId == b.SalleId
+                    && a.Jour == b.Jour
+                    && a.HeureDebut < b.HeureFin
+                    && b.HeureDebut < a.HeureFin)
+                {
+                    conflits.Add(new ConflitDto
+                    {
+                        Id          = $"S-{a.Id}-{b.Id}",
+                        Type        = "Salle",
+                        Description = $"La salle {a.Salle.Numero} est utilisée deux fois le {a.Jour} entre {a.HeureDebut:HH:mm} et {a.HeureFin:HH:mm}",
+                        Date        = DateTime.UtcNow,
+                    });
+                }
+            }
         }
 
-        // Conflit disponibilité
+        // ─── Conflit GROUPE (même niveau + filière) ────────────────────────────
+        for (int i = 0; i < slots.Count; i++)
+        {
+            for (int j = i + 1; j < slots.Count; j++)
+            {
+                var a = slots[i];
+                var b = slots[j];
+                if (a.NiveauId == b.NiveauId
+                    && a.FiliereId == b.FiliereId
+                    && a.Jour == b.Jour
+                    && a.HeureDebut < b.HeureFin
+                    && b.HeureDebut < a.HeureFin)
+                {
+                    conflits.Add(new ConflitDto
+                    {
+                        Id          = $"G-{a.Id}-{b.Id}",
+                        Type        = "Groupe",
+                        Description = $"Le groupe {a.Niveau?.Libelle} possède deux cours simultanés le {a.Jour} ({a.HeureDebut:HH:mm}-{a.HeureFin:HH:mm})",
+                        Date        = DateTime.UtcNow,
+                    });
+                }
+            }
+        }
+
+        // ─── Conflit INDISPONIBILITÉ enseignant ────────────────────────────────
         var (disponibilites, indisponibilites) = await ChargerDisponibilitesAsync(semestreId);
         foreach (var s in slots)
         {
@@ -710,7 +331,7 @@ public class EdtGeneratorService : IEdtGeneratorService
                 {
                     Id          = $"I-{s.Id}",
                     Type        = "Indisponibilite",
-                    Description = $"{s.Enseignant.Prenom[0]}. {s.Enseignant.Nom} planifié le {s.Jour} à {s.HeureDebut:HH\\:mm} alors qu'indisponible pour ce cours",
+                    Description = $"{s.Enseignant.Prenom} {s.Enseignant.Nom} planifié le {s.Jour} à {s.HeureDebut:HH:mm} alors qu'indisponible pour ce cours",
                     Date        = DateTime.UtcNow,
                 });
             }
