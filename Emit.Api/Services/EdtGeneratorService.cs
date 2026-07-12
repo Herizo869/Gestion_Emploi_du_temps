@@ -23,7 +23,7 @@ public class EdtGeneratorService : IEdtGeneratorService
     private readonly AppDbContext _db;
     public EdtGeneratorService(AppDbContext db) => _db = db;
 
-    // Créneaux standards EMIT (jour + horaire)
+    // Créneaux standards (jour + horaire)
     private static readonly (TimeOnly debut, TimeOnly fin)[] Creneaux = new[]
     {
         (new TimeOnly(7,  0), new TimeOnly(8,  0)),
@@ -36,7 +36,7 @@ public class EdtGeneratorService : IEdtGeneratorService
         (new TimeOnly(16, 0), new TimeOnly(17, 0)),
         (new TimeOnly(17, 0), new TimeOnly(18, 0)),
     };
-    
+
     private static readonly Jour[] Jours =
         { Jour.Lundi, Jour.Mardi, Jour.Mercredi, Jour.Jeudi, Jour.Vendredi };
 
