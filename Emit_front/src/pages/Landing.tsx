@@ -47,11 +47,11 @@ function Animated({ children, variant = "fade-up", delay = 0, className = "" }: 
   const duration = "duration-[900ms]";
 
   const variants: Record<AnimationVariant, { from: string; to: string }> = {
-    "fade-up":    { from: "opacity-0 translate-y-12",  to: "opacity-100 translate-y-0" },
-    "fade-down":  { from: "opacity-0 -translate-y-12", to: "opacity-100 translate-y-0" },
-    "fade-left":  { from: "opacity-0 -translate-x-12", to: "opacity-100 translate-x-0" },
-    "fade-right": { from: "opacity-0 translate-x-12",  to: "opacity-100 translate-x-0" },
-    "zoom":       { from: "opacity-0 scale-90",         to: "opacity-100 scale-100" },
+    "fade-up": { from: "opacity-0 translate-y-12", to: "opacity-100 translate-y-0" },
+    "fade-down": { from: "opacity-0 -translate-y-12", to: "opacity-100 translate-y-0" },
+    "fade-left": { from: "opacity-0 -translate-x-12", to: "opacity-100 translate-x-0" },
+    "fade-right": { from: "opacity-0 translate-x-12", to: "opacity-100 translate-x-0" },
+    "zoom": { from: "opacity-0 scale-90", to: "opacity-100 scale-100" },
   };
 
   return (
@@ -169,13 +169,13 @@ function ScrollProgress() {
 
 // ─── Slide progress dots (side navigation) ───────────────────────────────────
 const SLIDES = [
-  { id: "slide-hero",         label: "Titre" },
-  { id: "slide-problem",      label: "Problématique" },
+  { id: "slide-hero", label: "Titre" },
+  { id: "slide-problem", label: "Problématique" },
   { id: "slide-architecture", label: "Architecture" },
-  { id: "slide-features",     label: "Fonctionnalités" },
-  { id: "slide-security",     label: "Sécurité" },
-  { id: "slide-demo",         label: "Aperçu" },
-  { id: "slide-conclusion",   label: "Conclusion" },
+  { id: "slide-features", label: "Fonctionnalités" },
+  { id: "slide-security", label: "Sécurité" },
+  { id: "slide-demo", label: "Aperçu" },
+  { id: "slide-conclusion", label: "Conclusion" },
 ];
 
 function SideNav() {
@@ -208,11 +208,10 @@ function SideNav() {
           <span className={`hidden group-hover:inline-block text-[10px] font-semibold text-white bg-emit-navy/80 backdrop-blur px-2 py-0.5 rounded-full`}>
             {label}
           </span>
-          <span className={`block rounded-full transition-all duration-300 ${
-            idx === active
+          <span className={`block rounded-full transition-all duration-300 ${idx === active
               ? "w-3 h-3 bg-emit-sky shadow-[0_0_8px_rgba(126,200,227,0.8)]"
               : "w-2 h-2 bg-white/30 hover:bg-white/60"
-          }`} />
+            }`} />
         </button>
       ))}
     </nav>
@@ -509,7 +508,7 @@ export default function Landing() {
             ].map(({ icon, colorClass, title, desc, items, delay }) => (
               <Animated key={title} variant="fade-up" delay={delay}>
                 <div className={`group h-full rounded-2xl bg-white/4 border border-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-2 hover:shadow-lg card-glow text-left space-y-4 ${colorClass}`}>
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorClass.split(" ").slice(0,2).join(" ")}`}>
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-110 duration-300 ${colorClass.split(" ").slice(0, 2).join(" ")}`}>
                     {icon}
                   </div>
                   <div>
@@ -708,27 +707,33 @@ export default function Landing() {
                     </thead>
                     <tbody className="space-y-2">
                       {[
-                        { time: "07h30", cells: [
-                          { label: "Algorithmique", sub: "L1 · AMPHI-1", cls: "bg-white/5 border-white/8" },
-                          { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
-                          { label: "Réseaux", sub: "L3 · AMPHI-2", cls: "bg-white/5 border-white/8" },
-                          { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
-                          { label: "Maths", sub: "L1 · A102", cls: "bg-white/5 border-white/8" },
-                        ]},
-                        { time: "09h15", cells: [
-                          { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
-                          { label: "POO Java TD", sub: "L2 · A101", cls: "bg-emit-sky/20 border-emit-sky/20 text-emit-sky" },
-                          { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
-                          { label: "DevOps TP", sub: "M1 · B201", cls: "bg-green-500/20 border-green-500/20 text-green-400" },
-                          { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
-                        ]},
-                        { time: "13h30", cells: [
-                          { label: "Bases de Données", sub: "L2 · AMPHI-1", cls: "bg-white/5 border-white/8" },
-                          { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
-                          { label: "BDD SQL TP", sub: "L2 · B201", cls: "bg-green-500/20 border-green-500/20 text-green-400" },
-                          { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
-                          { label: "DevOps", sub: "M1 · AMPHI-2", cls: "bg-white/5 border-white/8" },
-                        ]},
+                        {
+                          time: "07h30", cells: [
+                            { label: "Algorithmique", sub: "L1 · AMPHI-1", cls: "bg-white/5 border-white/8" },
+                            { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
+                            { label: "Réseaux", sub: "L3 · AMPHI-2", cls: "bg-white/5 border-white/8" },
+                            { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
+                            { label: "Maths", sub: "L1 · A102", cls: "bg-white/5 border-white/8" },
+                          ]
+                        },
+                        {
+                          time: "09h15", cells: [
+                            { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
+                            { label: "POO Java TD", sub: "L2 · A101", cls: "bg-emit-sky/20 border-emit-sky/20 text-emit-sky" },
+                            { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
+                            { label: "DevOps TP", sub: "M1 · B201", cls: "bg-green-500/20 border-green-500/20 text-green-400" },
+                            { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
+                          ]
+                        },
+                        {
+                          time: "13h30", cells: [
+                            { label: "Bases de Données", sub: "L2 · AMPHI-1", cls: "bg-white/5 border-white/8" },
+                            { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
+                            { label: "BDD SQL TP", sub: "L2 · B201", cls: "bg-green-500/20 border-green-500/20 text-green-400" },
+                            { label: "—", sub: "", cls: "bg-transparent border-transparent text-slate-600" },
+                            { label: "DevOps", sub: "M1 · AMPHI-2", cls: "bg-white/5 border-white/8" },
+                          ]
+                        },
                       ].map(({ time, cells }) => (
                         <tr key={time}>
                           <td className="py-1.5 text-left text-[10px] text-slate-500">{time}</td>

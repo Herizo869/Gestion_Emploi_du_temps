@@ -19,10 +19,6 @@ export default function AdminDashboard() {
             <Badge tone="green">Publié</Badge>
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" leftIcon={<Download className="h-4 w-4" />}>Exporter</Button>
-          <Button leftIcon={<Zap className="h-4 w-4" />}>Générer EDT</Button>
-        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
