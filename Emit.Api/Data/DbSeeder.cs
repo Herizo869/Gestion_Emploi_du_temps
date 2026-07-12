@@ -374,5 +374,62 @@ public static class DbSeeder
         }
 
         await db.SaveChangesAsync();
+
+        // ══════════════════════════════════════════════════
+        // DISPONIBILITÉS (seedées séparément car la base peut déjà avoir des users)
+        // ══════════════════════════════════════════════════
+        if (!await db.Disponibilites.AnyAsync())
+        {
+            var tousEnseignants = await db.Enseignants
+                .Include(e => e.Cours)
+                .ThenInclude(ce => ce.Cours)
+                .ThenInclude(c => c.Niveau)
+                .ToListAsync();
+            var semestre = await db.Semestres.FirstOrDefaultAsync();
+            if (semestre != null)
+            {
+                var jours = new[] { "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi" };
+                var creneaux = new[]
+                {
+                    "07h30-09h00", "09h15-10h45", "11h00-12h30",
+                    "13h30-15h00", "15h15-16h45", "17h00-18h30"
+                };
+
+                foreach (var enseignant in tousEnseignants)
+                {
+                    foreach (var ce in enseignant.Cours)
+                    {
+                        // Marquer 3 créneaux par semaine comme disponibles pour chaque cours
+                        var rng = new Random(enseignant.GetHashCode() + ce.CoursId.GetHashCode());
+                        var creneauxChoisis = new HashSet<string>();
+                        for (int i = 0; i < 15; i++) // 3 créneaux × 5 jours
+                        {
+                            var jour = jours[rng.Next(jours.Length)];
+                            var creneau = creneaux[rng.Next(creneaux.Length)];
+                            var cle = $"{jour}-{creneau}";
+                            if (creneauxChoisis.Add(cle))
+                            {
+                                db.Disponibilites.Add(new Disponibilite
+                                {
+                                    EnseignantId = enseignant.Id,
+                                    SemestreId = semestre.Id,
+                                    CoursId = ce.CoursId,
+                                    NiveauId = ce.Cours.NiveauId,
+                                    Jour = jour,
+                                    Creneau = creneau,
+                                    EstDisponible = true,
+                                    EstIndisponible = false,
+                                });
+
+                                if (creneauxChoisis.Count >= 15) break;
+                            }
+                        }
+                    }
+                }
+                await db.SaveChangesAsync();
+            }
+        }
+
+        await db.SaveChangesAsync();
     }
 }
