@@ -14,7 +14,11 @@ var cfg = builder.Configuration;
 
 // --- DB ---
 builder.Services.AddDbContext<AppDbContext>(o =>
-    o.UseNpgsql(cfg.GetConnectionString("Default")));
+    o.UseNpgsql(cfg.GetConnectionString("Default"),
+        npgsqlOptions => npgsqlOptions.CommandTimeout(120)));
+
+// Désactiver les logs SQL verbose
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
 
 // --- Services ---
 builder.Services.AddAutoMapper(typeof(MappingProfile));

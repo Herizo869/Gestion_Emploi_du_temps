@@ -65,7 +65,8 @@ public class SemestreDto
     public Guid Id { get; set; }
     [Required] public string Libelle { get; set; } = null!;
     [Required] public string Annee { get; set; } = null!;
-    public StatutSemestre Statut { get; set; }
+    /// <summary>Statut en minuscules : "brouillon", "publie", "archive"</summary>
+    public string Statut { get; set; } = "brouillon";
     public DateTime? DatePublication { get; set; }
 }
 

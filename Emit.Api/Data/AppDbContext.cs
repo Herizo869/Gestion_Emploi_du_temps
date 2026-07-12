@@ -7,6 +7,8 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> opt) : base(opt) { }
 
+
+
     public DbSet<User> Users => Set<User>();
     public DbSet<Enseignant> Enseignants => Set<Enseignant>();
     public DbSet<Salle> Salles => Set<Salle>();
