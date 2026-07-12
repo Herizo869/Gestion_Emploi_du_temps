@@ -14,6 +14,14 @@ public class DispoDto
     public bool EstIndisponible { get; set; }
 }
 
+public class ConflitDispoDto
+{
+    public string Jour { get; set; } = "";
+    public string Creneau { get; set; } = "";
+    public string Cours1 { get; set; } = "";
+    public string Cours2 { get; set; } = "";
+}
+
 [ApiController, Authorize, Route("api/disponibilites")]
 public class DisponibilitesController : ControllerBase
 {
@@ -30,16 +38,56 @@ public class DisponibilitesController : ControllerBase
             && TimeOnly.TryParse(parts[1].Replace('h', ':'), out fin);
     }
 
-    // Retire de l'EDT tout créneau déjà planifié pour cet enseignant qui chevauche
+    // Vérifie, AVANT sauvegarde, si les nouvelles disponibilités (dtos) pour ce cours
+    // chevauchent une disponibilité "verte" déjà enregistrée sur un AUTRE cours du même enseignant.
+    private async Task<List<ConflitDispoDto>> DetecterConflitsAvantSauvegardeAsync(
+        Guid enseignantId, Guid semestreId, Guid coursId, List<DispoDto> dtos)
+    {
+        var autresDispos = await _db.Disponibilites
+            .Include(d => d.Cours)
+            .Where(d => d.EnseignantId == enseignantId && d.SemestreId == semestreId
+                     && d.CoursId != coursId && d.EstDisponible)
+            .ToListAsync();
+
+        if (autresDispos.Count == 0) return new List<ConflitDispoDto>();
+
+        var coursActuel = await _db.Cours.FindAsync(coursId);
+        var conflits = new List<ConflitDispoDto>();
+
+        foreach (var d in dtos.Where(d => d.EstDisponible))
+        {
+            if (!TryParseCreneau(d.Creneau, out var da, out var fa)) continue;
+
+            foreach (var autre in autresDispos)
+            {
+                if (autre.Jour != d.Jour) continue;
+                if (!TryParseCreneau(autre.Creneau, out var db_, out var fb)) continue;
+
+                if (da < fb && db_ < fa)
+                {
+                    conflits.Add(new ConflitDispoDto
+                    {
+                        Jour = d.Jour,
+                        Creneau = $"{d.Creneau} / {autre.Creneau}",
+                        Cours1 = coursActuel?.Intitule ?? "",
+                        Cours2 = autre.Cours.Intitule,
+                    });
+                }
+            }
+        }
+        return conflits;
+    }
+
+    // Retire de l'EDT tout créneau déjà planifié pour cet enseignant SUR CE COURS qui chevauche
     // une plage qu'il vient de déclarer indisponible, et notifie les admins.
-    private async Task LibererCreneauxIndisponiblesAsync(Guid enseignantId, Guid semestreId, List<DispoDto> dtos)
+    private async Task LibererCreneauxIndisponiblesAsync(Guid enseignantId, Guid coursId, Guid semestreId, List<DispoDto> dtos)
     {
         var indispos = dtos.Where(d => d.EstIndisponible).ToList();
         if (indispos.Count == 0) return;
 
         var slots = await _db.Slots
             .Include(s => s.Cours)
-            .Where(s => s.EnseignantId == enseignantId && s.SemestreId == semestreId)
+            .Where(s => s.EnseignantId == enseignantId && s.CoursId == coursId && s.SemestreId == semestreId)
             .ToListAsync();
         if (slots.Count == 0) return;
 
@@ -71,7 +119,7 @@ public class DisponibilitesController : ControllerBase
                 {
                     Type = NotifType.Planning,
                     Titre = "Créneau libéré automatiquement",
-                    Description = $"{enseignant?.Prenom} {enseignant?.Nom} s'est déclaré(e) indisponible le {slot.Jour} à {slot.HeureDebut:HH\\:mm} — le cours \"{slot.Cours?.Intitule}\" a été retiré de l'EDT et doit être replanifié.",
+                    Description = $"{enseignant?.Prenom} {enseignant?.Nom} s'est déclaré(e) indisponible le {slot.Jour} à {slot.HeureDebut:HH\\:mm} pour \"{slot.Cours?.Intitule}\" — le créneau a été retiré de l'EDT et doit être replanifié.",
                     UserId = admin.Id
                 });
             }
@@ -84,14 +132,15 @@ public class DisponibilitesController : ControllerBase
         }
     }
 
-    // GET /api/disponibilites/{enseignantId}?semestreId=... — Admin
+    // GET /api/disponibilites/{enseignantId}?semestreId=...&coursId=... — Admin
     [HttpGet("{enseignantId:guid}")]
-    public async Task<IActionResult> Get(Guid enseignantId, [FromQuery] Guid semestreId)
+    public async Task<IActionResult> Get(Guid enseignantId, [FromQuery] Guid semestreId, [FromQuery] Guid coursId)
     {
-        if (semestreId == Guid.Empty) return BadRequest("semestreId est requis.");
+        if (semestreId == Guid.Empty || coursId == Guid.Empty)
+            return BadRequest("semestreId et coursId sont requis.");
 
         var dispos = await _db.Disponibilites
-            .Where(d => d.EnseignantId == enseignantId && d.SemestreId == semestreId)
+            .Where(d => d.EnseignantId == enseignantId && d.SemestreId == semestreId && d.CoursId == coursId)
             .ToListAsync();
         return Ok(dispos.Select(d => new DispoDto
         {
@@ -102,14 +151,26 @@ public class DisponibilitesController : ControllerBase
         }));
     }
 
-    // PUT /api/disponibilites/{enseignantId}?semestreId=... — Admin
+    // PUT /api/disponibilites/{enseignantId}?semestreId=...&coursId=... — Admin
     [HttpPut("{enseignantId:guid}"), Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Save(Guid enseignantId, [FromQuery] Guid semestreId, [FromBody] List<DispoDto> dtos)
+    public async Task<IActionResult> Save(Guid enseignantId, [FromQuery] Guid semestreId, [FromQuery] Guid coursId, [FromBody] List<DispoDto> dtos)
     {
-        if (semestreId == Guid.Empty) return BadRequest("semestreId est requis.");
+        if (semestreId == Guid.Empty || coursId == Guid.Empty)
+            return BadRequest("semestreId et coursId sont requis.");
+
+        var cours = await _db.Cours.FindAsync(coursId);
+        if (cours is null) return NotFound("Cours introuvable.");
+
+        // Vérifie le chevauchement AVANT toute écriture : si un conflit existe avec un
+        // autre cours du même enseignant, on bloque et on n'enregistre rien.
+        var conflits = await DetecterConflitsAvantSauvegardeAsync(enseignantId, semestreId, coursId, dtos);
+        if (conflits.Count > 0)
+        {
+            return Conflict(new { message = "Chevauchement détecté avec un autre cours de cet enseignant.", conflits });
+        }
 
         var existing = await _db.Disponibilites
-            .Where(d => d.EnseignantId == enseignantId && d.SemestreId == semestreId)
+            .Where(d => d.EnseignantId == enseignantId && d.SemestreId == semestreId && d.CoursId == coursId)
             .ToListAsync();
         _db.Disponibilites.RemoveRange(existing);
 
@@ -118,6 +179,8 @@ public class DisponibilitesController : ControllerBase
             Id = Guid.NewGuid(),
             EnseignantId = enseignantId,
             SemestreId = semestreId,
+            CoursId = coursId,
+            NiveauId = cours.NiveauId,
             Jour = d.Jour,
             Creneau = d.Creneau,
             EstDisponible = d.EstDisponible,
@@ -125,24 +188,25 @@ public class DisponibilitesController : ControllerBase
         });
         await _db.Disponibilites.AddRangeAsync(newDispos);
 
-        await LibererCreneauxIndisponiblesAsync(enseignantId, semestreId, dtos);
-
+        await LibererCreneauxIndisponiblesAsync(enseignantId, coursId, semestreId, dtos);
         await _db.SaveChangesAsync();
-        return NoContent();
+
+        return Ok(new { conflits = new List<ConflitDispoDto>() });
     }
 
-    // GET /api/disponibilites/me?semestreId=... — Enseignant connecté
+    // GET /api/disponibilites/me?semestreId=...&coursId=... — Enseignant connecté
     [HttpGet("me")]
-    public async Task<IActionResult> GetMe([FromQuery] Guid semestreId)
+    public async Task<IActionResult> GetMe([FromQuery] Guid semestreId, [FromQuery] Guid coursId)
     {
-        if (semestreId == Guid.Empty) return BadRequest("semestreId est requis.");
+        if (semestreId == Guid.Empty || coursId == Guid.Empty)
+            return BadRequest("semestreId et coursId sont requis.");
 
         var email = User.Identity?.Name;
         var enseignant = await _db.Enseignants.FirstOrDefaultAsync(e => e.Email == email);
         if (enseignant is null) return NotFound();
 
         var dispos = await _db.Disponibilites
-            .Where(d => d.EnseignantId == enseignant.Id && d.SemestreId == semestreId)
+            .Where(d => d.EnseignantId == enseignant.Id && d.SemestreId == semestreId && d.CoursId == coursId)
             .ToListAsync();
         return Ok(dispos.Select(d => new DispoDto
         {
@@ -153,18 +217,29 @@ public class DisponibilitesController : ControllerBase
         }));
     }
 
-    // PUT /api/disponibilites/me?semestreId=... — Enseignant connecté
+    // PUT /api/disponibilites/me?semestreId=...&coursId=... — Enseignant connecté
     [HttpPut("me")]
-    public async Task<IActionResult> SaveMe([FromQuery] Guid semestreId, [FromBody] List<DispoDto> dtos)
+    public async Task<IActionResult> SaveMe([FromQuery] Guid semestreId, [FromQuery] Guid coursId, [FromBody] List<DispoDto> dtos)
     {
-        if (semestreId == Guid.Empty) return BadRequest("semestreId est requis.");
+        if (semestreId == Guid.Empty || coursId == Guid.Empty)
+            return BadRequest("semestreId et coursId sont requis.");
 
         var email = User.Identity?.Name;
         var enseignant = await _db.Enseignants.FirstOrDefaultAsync(e => e.Email == email);
         if (enseignant is null) return NotFound();
 
+        var cours = await _db.Cours.FirstOrDefaultAsync(c => c.Id == coursId && c.Enseignants.Any(ce => ce.EnseignantId == enseignant.Id));
+        if (cours is null) return Forbid();
+
+        // Vérifie le chevauchement AVANT toute écriture.
+        var conflits = await DetecterConflitsAvantSauvegardeAsync(enseignant.Id, semestreId, coursId, dtos);
+        if (conflits.Count > 0)
+        {
+            return Conflict(new { message = "Chevauchement détecté avec un autre de vos cours.", conflits });
+        }
+
         var existing = await _db.Disponibilites
-            .Where(d => d.EnseignantId == enseignant.Id && d.SemestreId == semestreId)
+            .Where(d => d.EnseignantId == enseignant.Id && d.SemestreId == semestreId && d.CoursId == coursId)
             .ToListAsync();
         _db.Disponibilites.RemoveRange(existing);
 
@@ -173,6 +248,8 @@ public class DisponibilitesController : ControllerBase
             Id = Guid.NewGuid(),
             EnseignantId = enseignant.Id,
             SemestreId = semestreId,
+            CoursId = coursId,
+            NiveauId = cours.NiveauId,
             Jour = d.Jour,
             Creneau = d.Creneau,
             EstDisponible = d.EstDisponible,
@@ -180,9 +257,9 @@ public class DisponibilitesController : ControllerBase
         });
         await _db.Disponibilites.AddRangeAsync(newDispos);
 
-        await LibererCreneauxIndisponiblesAsync(enseignant.Id, semestreId, dtos);
-
+        await LibererCreneauxIndisponiblesAsync(enseignant.Id, coursId, semestreId, dtos);
         await _db.SaveChangesAsync();
-        return NoContent();
+
+        return Ok(new { conflits = new List<ConflitDispoDto>() });
     }
 }
