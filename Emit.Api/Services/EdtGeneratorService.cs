@@ -26,14 +26,17 @@ public class EdtGeneratorService : IEdtGeneratorService
     // Créneaux standards EMIT (jour + horaire)
     private static readonly (TimeOnly debut, TimeOnly fin)[] Creneaux = new[]
     {
-        (new TimeOnly(7,30),  new TimeOnly(9,0)),
-        (new TimeOnly(9,15),  new TimeOnly(10,45)),
-        (new TimeOnly(11,0),  new TimeOnly(12,30)),
-        (new TimeOnly(13,30), new TimeOnly(15,0)),
-        (new TimeOnly(15,15), new TimeOnly(16,45)),
-        (new TimeOnly(17,0),  new TimeOnly(18,30)),
+        (new TimeOnly(7,  0), new TimeOnly(8,  0)),
+        (new TimeOnly(8,  0), new TimeOnly(9,  0)),
+        (new TimeOnly(9,  0), new TimeOnly(10, 0)),
+        (new TimeOnly(10, 0), new TimeOnly(11, 0)),
+        (new TimeOnly(11, 0), new TimeOnly(12, 0)),
+        (new TimeOnly(14, 0), new TimeOnly(15, 0)),
+        (new TimeOnly(15, 0), new TimeOnly(16, 0)),
+        (new TimeOnly(16, 0), new TimeOnly(17, 0)),
+        (new TimeOnly(17, 0), new TimeOnly(18, 0)),
     };
-
+    
     private static readonly Jour[] Jours =
         { Jour.Lundi, Jour.Mardi, Jour.Mercredi, Jour.Jeudi, Jour.Vendredi };
 
@@ -101,7 +104,7 @@ public class EdtGeneratorService : IEdtGeneratorService
         // il doit avoir au moins une disponibilité (vert) qui chevauche ce créneau.
         if (dispos.TryGetValue(cle, out var listeDispos) && listeDispos.Count > 0)
         {
-            return listeDispos.Any(p => p.jour == jour && debut >= p.debut && fin <= p.fin);
+            return listeDispos.Any(p => p.jour == jour && debut < p.fin && p.debut < fin);
         }
 
         // 3. S'il n'a défini aucune disponibilité (vert) pour ce cours (grille non renseignée),

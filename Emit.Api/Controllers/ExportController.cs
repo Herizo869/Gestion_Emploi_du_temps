@@ -1,5 +1,5 @@
 using Emit.Api.Data;
-using Emit.Api.Services;
+using Emit.Api.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +16,7 @@ public class ExportController : ControllerBase
     private readonly AppDbContext _db;
     public ExportController(AppDbContext db) { _db = db; }
 
-    private async Task<List<Entities.SlotEDT>> LoadSlots(Guid? semestreId, Guid? niveauId, Guid? filiereId, Guid? salleId)
+    private async Task<List<SlotEDT>> LoadSlots(Guid? semestreId, Guid? niveauId, Guid? filiereId, Guid? salleId)
     {
         var q = _db.Slots
             .Include(s => s.Cours).Include(s => s.Enseignant)
@@ -29,21 +29,64 @@ public class ExportController : ControllerBase
         return await q.OrderBy(s => s.Jour).ThenBy(s => s.HeureDebut).ToListAsync();
     }
 
+    // Fusionne les créneaux consécutifs (même jour, même cours, même enseignant, même salle,
+    // et réellement contigus dans le temps : fin de l'un == début du suivant) en une seule ligne.
+    private static List<(Jour Jour, TimeOnly Debut, TimeOnly Fin, SlotEDT Slot)> MergeSlots(List<SlotEDT> slots)
+    {
+        var result = new List<(Jour, TimeOnly, TimeOnly, SlotEDT)>();
+
+        var groupes = slots
+            .OrderBy(s => s.Jour).ThenBy(s => s.HeureDebut)
+            .GroupBy(s => s.Jour);
+
+        foreach (var groupe in groupes)
+        {
+            SlotEDT? courant = null;
+            TimeOnly debut = default, fin = default;
+
+            foreach (var s in groupe.OrderBy(s => s.HeureDebut))
+            {
+                if (courant != null
+                    && s.CoursId == courant.CoursId
+                    && s.EnseignantId == courant.EnseignantId
+                    && s.SalleId == courant.SalleId
+                    && s.HeureDebut == fin) // contigu : le nouveau créneau commence pile où le précédent finit
+                {
+                    fin = s.HeureFin; // on étend le bloc en cours
+                    continue;
+                }
+
+                if (courant != null)
+                    result.Add((courant.Jour, debut, fin, courant));
+
+                courant = s;
+                debut = s.HeureDebut;
+                fin = s.HeureFin;
+            }
+
+            if (courant != null)
+                result.Add((courant.Jour, debut, fin, courant));
+        }
+
+        return result.OrderBy(r => r.Item1).ThenBy(r => r.Item2).ToList();
+    }
+
     // GET /api/export/csv?semestreId=&niveauId=&filiereId=&salleId=
     [HttpGet("csv")]
     public async Task<IActionResult> Csv(Guid? semestreId, Guid? niveauId, Guid? filiereId, Guid? salleId)
     {
         var slots = await LoadSlots(semestreId, niveauId, filiereId, salleId);
+        var lignes = MergeSlots(slots);
 
         var sb = new StringBuilder();
         sb.AppendLine("Jour;Debut;Fin;Cours;Type;Enseignant;Salle;Niveau;Filiere");
-        foreach (var s in slots)
+        foreach (var (jour, debut, fin, s) in lignes)
         {
             sb.AppendLine(string.Join(";", new string[]
             {
-                s.Jour.ToString(),
-                s.HeureDebut.ToString("HH:mm"),
-                s.HeureFin.ToString("HH:mm"),
+                jour.ToString(),
+                debut.ToString("HH:mm"),
+                fin.ToString("HH:mm"),
                 s.Cours.Intitule,
                 s.Cours.Type.ToString(),
                 $"{s.Enseignant.Prenom} {s.Enseignant.Nom}",
@@ -62,6 +105,7 @@ public class ExportController : ControllerBase
     public async Task<IActionResult> Pdf(Guid? semestreId, Guid? niveauId, Guid? filiereId, Guid? salleId, string orientation = "portrait")
     {
         var slots = await LoadSlots(semestreId, niveauId, filiereId, salleId);
+        var lignes = MergeSlots(slots);
         var isLandscape = orientation == "paysage";
 
         var titre = slots.Count > 0
@@ -96,10 +140,10 @@ public class ExportController : ControllerBase
                             header.Cell().Background(Colors.Grey.Lighten2).Padding(4).Text(h).Bold();
                     });
 
-                    foreach (var s in slots)
+                    foreach (var (jour, debut, fin, s) in lignes)
                     {
-                        table.Cell().Padding(4).Text(s.Jour.ToString());
-                        table.Cell().Padding(4).Text($"{s.HeureDebut:HH\\:mm} - {s.HeureFin:HH\\:mm}");
+                        table.Cell().Padding(4).Text(jour.ToString());
+                        table.Cell().Padding(4).Text($"{debut:HH\\:mm} - {fin:HH\\:mm}");
                         table.Cell().Padding(4).Text(s.Cours.Intitule);
                         table.Cell().Padding(4).Text(s.Cours.Type.ToString());
                         table.Cell().Padding(4).Text($"{s.Enseignant.Prenom} {s.Enseignant.Nom}");

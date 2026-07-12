@@ -38,33 +38,39 @@ public class DisponibilitesController : ControllerBase
             && TimeOnly.TryParse(parts[1].Replace('h', ':'), out fin);
     }
 
-    // Détecte, pour un enseignant+semestre donné, les créneaux où il est déclaré
-    // "disponible" sur DEUX cours différents qui se chevauchent dans le temps.
-    private async Task<List<ConflitDispoDto>> DetecterConflitsCoursAsync(Guid enseignantId, Guid semestreId)
+    // Vérifie, AVANT sauvegarde, si les nouvelles disponibilités (dtos) pour ce cours
+    // chevauchent une disponibilité "verte" déjà enregistrée sur un AUTRE cours du même enseignant.
+    private async Task<List<ConflitDispoDto>> DetecterConflitsAvantSauvegardeAsync(
+        Guid enseignantId, Guid semestreId, Guid coursId, List<DispoDto> dtos)
     {
-        var dispos = await _db.Disponibilites
+        var autresDispos = await _db.Disponibilites
             .Include(d => d.Cours)
-            .Where(d => d.EnseignantId == enseignantId && d.SemestreId == semestreId && d.EstDisponible)
+            .Where(d => d.EnseignantId == enseignantId && d.SemestreId == semestreId
+                     && d.CoursId != coursId && d.EstDisponible)
             .ToListAsync();
 
+        if (autresDispos.Count == 0) return new List<ConflitDispoDto>();
+
+        var coursActuel = await _db.Cours.FindAsync(coursId);
         var conflits = new List<ConflitDispoDto>();
-        for (int i = 0; i < dispos.Count; i++)
+
+        foreach (var d in dtos.Where(d => d.EstDisponible))
         {
-            for (int j = i + 1; j < dispos.Count; j++)
+            if (!TryParseCreneau(d.Creneau, out var da, out var fa)) continue;
+
+            foreach (var autre in autresDispos)
             {
-                var a = dispos[i]; var b = dispos[j];
-                if (a.CoursId == b.CoursId) continue;
-                if (a.Jour != b.Jour) continue;
-                if (!TryParseCreneau(a.Creneau, out var da, out var fa)) continue;
-                if (!TryParseCreneau(b.Creneau, out var db_, out var fb)) continue;
+                if (autre.Jour != d.Jour) continue;
+                if (!TryParseCreneau(autre.Creneau, out var db_, out var fb)) continue;
+
                 if (da < fb && db_ < fa)
                 {
                     conflits.Add(new ConflitDispoDto
                     {
-                        Jour = a.Jour,
-                        Creneau = $"{a.Creneau} / {b.Creneau}",
-                        Cours1 = a.Cours.Intitule,
-                        Cours2 = b.Cours.Intitule,
+                        Jour = d.Jour,
+                        Creneau = $"{d.Creneau} / {autre.Creneau}",
+                        Cours1 = coursActuel?.Intitule ?? "",
+                        Cours2 = autre.Cours.Intitule,
                     });
                 }
             }
@@ -155,6 +161,14 @@ public class DisponibilitesController : ControllerBase
         var cours = await _db.Cours.FindAsync(coursId);
         if (cours is null) return NotFound("Cours introuvable.");
 
+        // Vérifie le chevauchement AVANT toute écriture : si un conflit existe avec un
+        // autre cours du même enseignant, on bloque et on n'enregistre rien.
+        var conflits = await DetecterConflitsAvantSauvegardeAsync(enseignantId, semestreId, coursId, dtos);
+        if (conflits.Count > 0)
+        {
+            return Conflict(new { message = "Chevauchement détecté avec un autre cours de cet enseignant.", conflits });
+        }
+
         var existing = await _db.Disponibilites
             .Where(d => d.EnseignantId == enseignantId && d.SemestreId == semestreId && d.CoursId == coursId)
             .ToListAsync();
@@ -177,14 +191,8 @@ public class DisponibilitesController : ControllerBase
         await LibererCreneauxIndisponiblesAsync(enseignantId, coursId, semestreId, dtos);
         await _db.SaveChangesAsync();
 
-        var conflits = await DetecterConflitsCoursAsync(enseignantId, semestreId);
-        return Ok(new { conflits });
+        return Ok(new { conflits = new List<ConflitDispoDto>() });
     }
-
-    // GET /api/disponibilites/conflits?semestreId=...&enseignantId=... — Admin
-    [HttpGet("conflits")]
-    public async Task<ActionResult<List<ConflitDispoDto>>> Conflits([FromQuery] Guid semestreId, [FromQuery] Guid enseignantId)
-        => Ok(await DetecterConflitsCoursAsync(enseignantId, semestreId));
 
     // GET /api/disponibilites/me?semestreId=...&coursId=... — Enseignant connecté
     [HttpGet("me")]
@@ -223,6 +231,13 @@ public class DisponibilitesController : ControllerBase
         var cours = await _db.Cours.FirstOrDefaultAsync(c => c.Id == coursId && c.Enseignants.Any(ce => ce.EnseignantId == enseignant.Id));
         if (cours is null) return Forbid();
 
+        // Vérifie le chevauchement AVANT toute écriture.
+        var conflits = await DetecterConflitsAvantSauvegardeAsync(enseignant.Id, semestreId, coursId, dtos);
+        if (conflits.Count > 0)
+        {
+            return Conflict(new { message = "Chevauchement détecté avec un autre de vos cours.", conflits });
+        }
+
         var existing = await _db.Disponibilites
             .Where(d => d.EnseignantId == enseignant.Id && d.SemestreId == semestreId && d.CoursId == coursId)
             .ToListAsync();
@@ -245,17 +260,6 @@ public class DisponibilitesController : ControllerBase
         await LibererCreneauxIndisponiblesAsync(enseignant.Id, coursId, semestreId, dtos);
         await _db.SaveChangesAsync();
 
-        var conflits = await DetecterConflitsCoursAsync(enseignant.Id, semestreId);
-        return Ok(new { conflits });
-    }
-
-    // GET /api/disponibilites/mes-conflits?semestreId=... — Enseignant connecté
-    [HttpGet("mes-conflits")]
-    public async Task<IActionResult> MesConflits([FromQuery] Guid semestreId)
-    {
-        var email = User.Identity?.Name;
-        var enseignant = await _db.Enseignants.FirstOrDefaultAsync(e => e.Email == email);
-        if (enseignant is null) return NotFound();
-        return Ok(await DetecterConflitsCoursAsync(enseignant.Id, semestreId));
+        return Ok(new { conflits = new List<ConflitDispoDto>() });
     }
 }
