@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Emit.Api</RootNamespace>
     <AssemblyName>Emit.Api</AssemblyName>
+    <UserSecretsId>25aa44c3-98ae-4822-8331-06c3d036b2fd</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
