@@ -24,6 +24,9 @@ builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogL
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEdtGeneratorService, EdtGeneratorService>();
+builder.Services.AddScoped<ISupabaseAdminService, SupabaseAdminService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient();
 
 // --- JWT ---
 var jwtKey = Encoding.UTF8.GetBytes(cfg["Jwt:Key"]!);

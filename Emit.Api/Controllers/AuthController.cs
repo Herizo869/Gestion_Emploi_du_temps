@@ -27,6 +27,16 @@ public class AuthController : ControllerBase
         if (u is null || !BCrypt.Net.BCrypt.Verify(dto.Password, u.PasswordHash))
             return Unauthorized(new { message = "Identifiants invalides" });
 
+        // 🔒 Vérifier que l'enseignant est bien lié à un compte dans la table Enseignants
+        if (u.Role == Role.Enseignant && u.EnseignantId is null)
+        {
+            return StatusCode(403, new
+            {
+                message = "Votre compte n'a pas encore été créé ou validé par un administrateur. " +
+                          "Veuillez contacter l'administration pour activer votre accès."
+            });
+        }
+
         return Ok(new AuthResponseDto
         {
             Token = _token.Create(u),

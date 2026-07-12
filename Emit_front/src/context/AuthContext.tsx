@@ -154,13 +154,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!data.user) return { ok: false, error: "Utilisateur introuvable." };
 
-    // 1️⃣ D'abord récupérer le token API C# et le stocker AVANT de mettre à jour le user
-    //    (sinon DataContext.refresh() se déclenche sans token → 401 Unauthorized)
+    // 1️⃣ Récupérer le token API C# — si échec, refuser la connexion
     try {
       const apiRes = await apiLogin(email, password);
       setToken(apiRes.token);
     } catch (apiErr) {
-      console.warn("[AuthContext] Impossible d'obtenir le token API C# :", apiErr);
+      // 🔒 Annuler la session Supabase si le backend C# refuse l'accès
+      await supabase.auth.signOut();
+      const message = apiErr instanceof Error ? apiErr.message : "Erreur de connexion";
+
+      // Détecter le cas d'un enseignant sans lien dans la table Enseignants
+      if (message.includes("compte n'a pas encore été créé") || message.includes("403")) {
+        return {
+          ok: false,
+          error: "Votre compte n'a pas encore été créé ou validé par un administrateur. Veuillez contacter l'administration.",
+        };
+      }
+
+      return { ok: false, error: message };
     }
 
     // 2️⃣ Ensuite seulement mettre à jour le user → DataContext.refresh() aura le token
