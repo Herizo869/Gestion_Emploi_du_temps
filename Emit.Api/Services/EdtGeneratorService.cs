@@ -9,6 +9,7 @@ public interface IEdtGeneratorService
 {
     Task<EdtGenerationResult> GenerateAsync(Guid semestreId);
     Task<List<ConflitDto>> DetectConflitsAsync(Guid semestreId);
+    Task RecalculateOccupationsAsync();
 }
 
 public class EdtGenerationResult
@@ -51,6 +52,33 @@ public class EdtGeneratorService : IEdtGeneratorService
         var finStr   = parts[1].Trim().Replace('h', ':');
         return TimeOnly.TryParse(debutStr, out debut)
             && TimeOnly.TryParse(finStr,   out fin);
+    }
+
+    /// <summary>
+    /// Recalcule le taux d'occupation (0-100) de chaque salle à partir
+    /// des créneaux EDT de tous les semestres.
+    /// Occupation = (nombre de créneaux où la salle est réservée / nombre total de créneaux possibles) * 100
+    /// </summary>
+    public async Task RecalculateOccupationsAsync()
+    {
+        const int totalCreneaux = 6 * 5; // 6 créneaux/jour × 5 jours = 30
+
+        var salles = await _db.Salles.ToListAsync();
+        var slots = await _db.Slots
+            .Include(s => s.Salle)
+            .ToListAsync();
+
+        var slotCountBySalle = slots
+            .GroupBy(s => s.SalleId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        foreach (var salle in salles)
+        {
+            var count = slotCountBySalle.GetValueOrDefault(salle.Id, 0);
+            salle.Occupation = (int)Math.Round((double)count / totalCreneaux * 100);
+        }
+
+        await _db.SaveChangesAsync();
     }
 
     // Charge les disponibilités/indisponibilités déclarées pour le semestre,
@@ -236,6 +264,9 @@ public class EdtGeneratorService : IEdtGeneratorService
         });
 
         await _db.SaveChangesAsync();
+
+        // Recalculer l'occupation des salles après la génération
+        await RecalculateOccupationsAsync();
 
         result.Conflits = await DetectConflitsAsync(semestreId);
 

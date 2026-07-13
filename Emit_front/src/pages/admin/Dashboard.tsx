@@ -106,15 +106,26 @@ export default function AdminDashboard() {
   // ── OCCUPATION RÉELLE des salles (depuis EDT) ──────────────
   const occupationSalles = useMemo(() => {
     const totalCreneaux = CRENEAUX.length * JOURS.length;
+    // Indexer par salleId si disponible, sinon par nom de salle
     const salleSlotCount = new Map<string, number>();
+    const salleSlotCountById = new Map<string, number>();
     edt.forEach(s => {
-      const prev = salleSlotCount.get(s.salle) ?? 0;
-      salleSlotCount.set(s.salle, prev + 1);
+      if (s.salleId) {
+        const prev = salleSlotCountById.get(s.salleId) ?? 0;
+        salleSlotCountById.set(s.salleId, prev + 1);
+      } else {
+        const prev = salleSlotCount.get(s.salle) ?? 0;
+        salleSlotCount.set(s.salle, prev + 1);
+      }
     });
-    return salles.map(s => ({
-      ...s,
-      occupationCalculee: Math.round(((salleSlotCount.get(s.numero) ?? 0) / totalCreneaux) * 100),
-    }));
+    return salles.map(s => {
+      // Essayer d'abord par salleId, puis par numero
+      const countFromId = salleSlotCountById.get(s.id) ?? 0;
+      const countFromName = salleSlotCount.get(s.numero) ?? 0;
+      const count = countFromId || countFromName;
+      const occupationCalculee = Math.round((count / totalCreneaux) * 100);
+      return { ...s, occupationCalculee };
+    });
   }, [salles, edt]);
 
   // ── STATS ───────────────────────────────────────────────────

@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit2, Trash2, AlertTriangle, Search, Users, Building2, DoorOpen, TrendingUp, Layers } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertTriangle, Search, Users, Building2, DoorOpen, TrendingUp, Layers, RotateCcw, Loader2 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import { useData } from "@/context/DataContext";
-import { apiCreateSalle, apiUpdateSalle, apiDeleteSalle } from "@/lib/api";
+import { apiCreateSalle, apiUpdateSalle, apiDeleteSalle, apiRecalculateOccupation } from "@/lib/api";
 import type { Salle } from "@/types";
 
 const TYPE_CONFIG = {
@@ -39,8 +39,21 @@ export default function AdminSalles() {
   const [open, setOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Salle | null>(null);
   const [confirm, setConfirm] = useState<Salle | null>(null);
+
+  const handleRecalculate = async () => {
+    setRecalculating(true);
+    try {
+      await apiRecalculateOccupation();
+      await refresh();
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setRecalculating(false);
+    }
+  };
   const [form, setForm] = useState<Omit<Salle, "id">>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -161,9 +174,19 @@ export default function AdminSalles() {
           <h1 className="text-2xl font-bold text-slate-900">Salles</h1>
           <p className="text-sm text-slate-500">{items.length} salles configurées</p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openAdd}>
-          Ajouter une salle
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            leftIcon={recalculating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+            onClick={handleRecalculate}
+            disabled={recalculating}
+          >
+            {recalculating ? "Calcul..." : "Recalculer l'occupation"}
+          </Button>
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openAdd}>
+            Ajouter une salle
+          </Button>
+        </div>
       </div>
 
       {/* Statistiques */}
