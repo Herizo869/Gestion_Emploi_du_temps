@@ -1,5 +1,5 @@
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LayoutDashboard, Users, Building2, BookOpen, GraduationCap,
   CalendarRange, Zap, CalendarDays, History, User, Settings,
@@ -9,6 +9,7 @@ import {
 import Logo from "./Logo";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
+import { getPreferences, type NotifType } from "@/lib/preferences";
 
 interface Item { to: string; label: string; icon: any; badge?: number }
 interface Group { title: string; icon: any; items: Item[] }
@@ -69,15 +70,25 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
   const [openUser, setOpenUser] = useState(false);
   const [openNotif, setOpenNotif] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
   const { notifications } = useData();
+  const ref = useRef<HTMLDivElement>(null);
 
   const nameParts = (user?.full_name ?? user?.email ?? "?").split(" ");
   const initials = (nameParts.length >= 2
     ? nameParts[0][0] + nameParts[nameParts.length - 1][0]
     : (user?.full_name ?? user?.email ?? "?")[0]
   ).toUpperCase();
-  const unread = notifications.filter((n) => !n.lu).length;
+  // Filtrer les notifications selon les préférences utilisateur
+  const filteredNotifications = useMemo(() => {
+    const prefs = getPreferences();
+    return notifications.filter(n => {
+      const t = n.type as NotifType;
+      return prefs.notifications[t] !== false;
+    });
+  }, [notifications]);
+
+  const unread = filteredNotifications.filter((n) => !n.lu).length;
+  const hiddenCount = notifications.length - filteredNotifications.length;
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -99,6 +110,7 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
   const isActiveGroup = (g: Group) => g.items.some((i) => pathname === i.to);
 
   const profileLink = role === "admin" ? "/admin/profil" : "/enseignant/profil";
+  const settingsLink = role === "admin" ? "/admin/parametres" : "/enseignant/parametres";
   const notifLink = role === "enseignant" ? "/enseignant/notifications" : undefined;
 
   return (
@@ -200,12 +212,17 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
                   )}
                 </div>
                 <ul className="max-h-96 overflow-y-auto">
-                  {notifications.length === 0 ? (
+                  {hiddenCount > 0 && (
+                    <li className="px-4 py-2 text-center text-[10px] text-slate-400 italic border-b border-slate-50">
+                      {hiddenCount} notification{hiddenCount > 1 ? "s" : ""} masquée{hiddenCount > 1 ? "s" : ""} (Paramètres)
+                    </li>
+                  )}
+                  {filteredNotifications.length === 0 ? (
                     <li className="px-4 py-8 text-center text-xs text-slate-400">
                       Aucune notification
                     </li>
                   ) : (
-                    notifications.slice(0, 8).map((n) => {
+                    filteredNotifications.slice(0, 8).map((n) => {
                       const t = n.type as string;
                       const icon = t === "planning" ? <Calendar className="h-3.5 w-3.5" />
                         : t === "cours" ? <BookOpen className="h-3.5 w-3.5" />
@@ -244,13 +261,13 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
                     })
                   )}
                 </ul>
-                {notifications.length > 0 && (
+                {filteredNotifications.length > 0 && (
                   <div className="border-t border-slate-100 px-4 py-2 text-center">
                     <button
                       onClick={() => nav(role === "enseignant" ? "/enseignant/notifications" : "/admin/historique")}
                       className="text-[11px] font-medium text-emit-sky hover:text-emit-navy transition-colors"
                     >
-                      Voir toutes les notifications ({notifications.length})
+                      Voir toutes les notifications ({filteredNotifications.length})
                     </button>
                   </div>
                 )}
@@ -299,7 +316,7 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
                   )}
                   <li>
                     <button
-                      onClick={() => setOpenUser(false)}
+                      onClick={() => { setOpenUser(false); nav(settingsLink); }}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-emit-sky/10 hover:text-emit-navy"
                     >
                       <Settings className="h-4 w-4 text-emit-sky" /> Paramètres

@@ -17,6 +17,7 @@ import AdminEdt from "./pages/admin/Edt";
 import AdminExport from "./pages/admin/Export";
 import AdminHistorique from "./pages/admin/Historique";
 import AdminProfil from "./pages/admin/Profil";
+import AdminParametres from "./pages/admin/Parametres";
 
 import EnsDashboard from "./pages/enseignant/Dashboard";
 import EnsCours from "./pages/enseignant/Cours";
@@ -24,6 +25,7 @@ import EnsDisponibilites from "./pages/enseignant/Disponibilites";
 import EnsEdt from "./pages/enseignant/Edt";
 import EnsProfil from "./pages/enseignant/Profil";
 import EnsNotifications from "./pages/enseignant/Notifications";
+import EnsParametres from "./pages/enseignant/Parametres";
 
 import PublicEdt from "./pages/public/Edt";
 import NotFound from "./pages/NotFound";
@@ -56,6 +58,7 @@ export default function App() {
         <Route path="export" element={<AdminExport />} />
         <Route path="historique" element={<AdminHistorique />} />
         <Route path="profil" element={<AdminProfil />} />
+        <Route path="parametres" element={<AdminParametres />} />
       </Route>
 
       <Route
@@ -73,6 +76,7 @@ export default function App() {
         <Route path="edt" element={<EnsEdt />} />
         <Route path="profil" element={<EnsProfil />} />
         <Route path="notifications" element={<EnsNotifications />} />
+        <Route path="parametres" element={<EnsParametres />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />
