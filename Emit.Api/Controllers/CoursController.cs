@@ -27,7 +27,11 @@ public class CoursController : ControllerBase
     public async Task<ActionResult<IEnumerable<CoursDto>>> GetMine()
     {
         var ens = User.FindFirst("enseignantId")?.Value;
-        if (!Guid.TryParse(ens, out var eid)) return Forbid();
+        if (!Guid.TryParse(ens, out var eid))
+            return StatusCode(403, new {
+                message = "Aucun profil enseignant n'est associé à ce compte. Contactez un administrateur pour lier votre compte à une fiche enseignant (email correspondant requis)."
+            });
+
         var list = await Query().Where(c => c.Enseignants.Any(x => x.EnseignantId == eid)).ToListAsync();
         return Ok(_map.Map<List<CoursDto>>(list));
     }
