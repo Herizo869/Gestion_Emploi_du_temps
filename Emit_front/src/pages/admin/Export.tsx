@@ -107,23 +107,23 @@ export default function AdminExport() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-slate-900">Export & publication</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Export & publication</h1>
 
       <Card>
         <CardHeader title="Filtres d'export" />
         <CardBody className="grid gap-3 sm:grid-cols-4">
-          <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)} className="h-11 rounded-lg border border-slate-300 px-3 text-sm">
+          <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)} className="h-11 rounded-lg border border-slate-300 px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
             {semestres.map((s) => <option key={s.id} value={s.id}>{s.libelle} ({s.annee})</option>)}
           </select>
-          <select value={niveauId} onChange={(e) => setNiveauId(e.target.value)} className="h-11 rounded-lg border border-slate-300 px-3 text-sm">
+          <select value={niveauId} onChange={(e) => setNiveauId(e.target.value)} className="h-11 rounded-lg border border-slate-300 px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
             <option value="">Tous niveaux</option>
             {niveaux.map((n) => <option key={n.id} value={n.id}>{n.libelle}</option>)}
           </select>
-          <select value={filiereId} onChange={(e) => setFiliereId(e.target.value)} disabled={!niveauId} className="h-11 rounded-lg border border-slate-300 px-3 text-sm disabled:opacity-50">
+          <select value={filiereId} onChange={(e) => setFiliereId(e.target.value)} disabled={!niveauId} className="h-11 rounded-lg border border-slate-300 px-3 text-sm disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
             <option value="">Toutes filières</option>
             {filieresDuNiveau.map((f) => <option key={f.id} value={f.id}>{f.libelle}</option>)}
           </select>
-          <select value={salleId} onChange={(e) => setSalleId(e.target.value)} className="h-11 rounded-lg border border-slate-300 px-3 text-sm">
+          <select value={salleId} onChange={(e) => setSalleId(e.target.value)} className="h-11 rounded-lg border border-slate-300 px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
             <option value="">Toutes salles</option>
             {salles.map((s) => <option key={s.id} value={s.id}>{s.numero}</option>)}
           </select>
@@ -149,7 +149,7 @@ export default function AdminExport() {
       </Card>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">{error}</div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -157,8 +157,8 @@ export default function AdminExport() {
           <CardBody className="space-y-3">
             <FileText className="h-7 w-7 text-emit-navy" />
             <div>
-              <h3 className="text-sm font-semibold">PDF A4 Portrait</h3>
-              <p className="text-xs text-slate-500">Compact — idéal affichage mural</p>
+              <h3 className="text-sm font-semibold dark:text-slate-100">PDF A4 Portrait</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Compact — idéal affichage mural</p>
             </div>
             <Button fullWidth leftIcon={<Download className="h-4 w-4" />} disabled={downloading !== null} onClick={() => download("pdf-portrait")}>
               {downloading === "pdf-portrait" ? "Génération..." : "Télécharger"}
@@ -169,8 +169,8 @@ export default function AdminExport() {
           <CardBody className="space-y-3">
             <FileText className="h-7 w-7 text-emit-blue" />
             <div>
-              <h3 className="text-sm font-semibold">PDF A4 Paysage</h3>
-              <p className="text-xs text-slate-500">Planning détaillé</p>
+              <h3 className="text-sm font-semibold dark:text-slate-100">PDF A4 Paysage</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Planning détaillé</p>
             </div>
             <Button fullWidth leftIcon={<Download className="h-4 w-4" />} disabled={downloading !== null} onClick={() => download("pdf-paysage")}>
               {downloading === "pdf-paysage" ? "Génération..." : "Télécharger"}
@@ -181,8 +181,8 @@ export default function AdminExport() {
           <CardBody className="space-y-3">
             <FileSpreadsheet className="h-7 w-7 text-green-600" />
             <div>
-              <h3 className="text-sm font-semibold">CSV / Excel</h3>
-              <p className="text-xs text-slate-500">Données brutes</p>
+              <h3 className="text-sm font-semibold dark:text-slate-100">CSV / Excel</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Données brutes</p>
             </div>
             <Button fullWidth variant="secondary" leftIcon={<Download className="h-4 w-4" />} disabled={downloading !== null} onClick={() => download("csv")}>
               {downloading === "csv" ? "Génération..." : "Télécharger"}
@@ -194,9 +194,9 @@ export default function AdminExport() {
       <Card>
         <CardHeader title="Lien public partageable" />
         <CardBody className="space-y-3">
-          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <Link2 className="h-4 w-4 text-slate-500" />
-            <code className="flex-1 truncate text-xs text-slate-700">{publicUrl}</code>
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+            <Link2 className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+            <code className="flex-1 truncate text-xs text-slate-700 dark:text-slate-300">{publicUrl}</code>
             <Button size="sm" variant="outline" onClick={copyLink} leftIcon={copied ? <Check className="h-3.5 w-3.5" /> : undefined}>
               {copied ? "Copié" : "Copier"}
             </Button>
@@ -212,7 +212,7 @@ export default function AdminExport() {
               {semestreActuel?.statut === "publie" ? "Publié" : "Brouillon"}
             </Badge>
             {semestreActuel?.datePublication && (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Dernière publication : {new Date(semestreActuel.datePublication).toLocaleString("fr-FR")}
               </p>
             )}

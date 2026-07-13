@@ -135,18 +135,18 @@ export default function AdminDashboard() {
       {/* ═══ HEADER ═══ */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Tableau de bord</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Tableau de bord</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {semestreActif ? (
               <>
                 Semestre actif :{" "}
-                <span className="font-medium text-slate-700">{semestreActif.libelle} — {semestreActif.annee}</span>{" "}
+                <span className="font-medium text-slate-700 dark:text-slate-300">{semestreActif.libelle} — {semestreActif.annee}</span>{" "}
                 <Badge tone={semestreActif.statut === "publie" ? "green" : semestreActif.statut === "archive" ? "gray" : "orange"}>
                   {semestreActif.statut === "publie" ? "Publié" : semestreActif.statut === "archive" ? "Archivé" : "Brouillon"}
                 </Badge>
               </>
             ) : (
-              <span className="text-slate-400">Aucun semestre actif</span>
+              <span className="text-slate-400 dark:text-slate-500">Aucun semestre actif</span>
             )}
           </p>
         </div>
@@ -186,9 +186,9 @@ export default function AdminDashboard() {
           />
           <CardBody className="max-h-80 overflow-y-auto">
             {conflitsReels.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+              <div className="flex flex-col items-center justify-center py-8 text-slate-400 dark:text-slate-500">
                 <CheckCircle2 className="h-10 w-10 text-green-400 mb-2" />
-                <p className="text-sm font-medium text-green-600">Planning cohérent</p>
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">Planning cohérent</p>
                 <p className="text-xs mt-1">Aucun conflit d'enseignant ou de salle détecté</p>
               </div>
             ) : (
@@ -197,15 +197,15 @@ export default function AdminDashboard() {
                   <li
                     key={c.id}
                     onClick={() => navigate(c.navTo)}
-                    className="flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 p-3 hover:bg-red-100/80 transition-all duration-150 cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
+                    className="flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 p-3 hover:bg-red-100/80 transition-all duration-150 cursor-pointer hover:-translate-y-0.5 hover:shadow-md dark:border-red-800 dark:bg-red-900/20 dark:hover:bg-red-900/30"
                   >
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-red-800">
+                      <p className="text-sm font-medium text-red-800 dark:text-red-300">
                         {c.type === "Salle" ? "🏛️ Salle" : "👤 Enseignant"} — Double réservation
                       </p>
-                      <p className="text-xs text-red-700 line-clamp-2 mt-0.5">{c.description}</p>
-                      <p className="mt-1 text-[10px] text-slate-500">{c.date}</p>
+                      <p className="text-xs text-red-700 line-clamp-2 mt-0.5 dark:text-red-300">{c.description}</p>
+                      <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">{c.date}</p>
                     </div>
                     <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); navigate(c.navTo); }}>
                       Voir l'EDT
@@ -222,12 +222,12 @@ export default function AdminDashboard() {
           <CardHeader title="Avancement par niveau" subtitle="Progression de l'EDT" />
           <CardBody>
             {statutNiveauxReels.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-400">Aucun niveau configuré</p>
+              <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">Aucun niveau configuré</p>
             ) : (
               <table className="w-full text-sm">
                 <tbody>
                   {statutNiveauxReels.map((r) => (
-                    <tr key={r.niveau} className="border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50 cursor-pointer" onClick={() => navigate("/admin/edt")}>
+                    <tr key={r.niveau} className="border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50 cursor-pointer dark:border-slate-700 dark:hover:bg-slate-800/50" onClick={() => navigate("/admin/edt")}>
                       <td className="py-3 font-medium">{r.niveau}</td>
                       <td className="py-3 text-right">
                         {r.statut === "Publié" && <Badge tone="green">Publié</Badge>}
@@ -250,20 +250,20 @@ export default function AdminDashboard() {
           <CardHeader title="Occupation des salles" subtitle="Calculée depuis les créneaux EDT réels" />
           <CardBody className="space-y-3">
             {occupationSalles.length === 0 ? (
-              <p className="py-4 text-center text-sm text-slate-400">Aucune salle configurée</p>
+              <p className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">Aucune salle configurée</p>
             ) : (
               occupationSalles.slice(0, 5).map((s) => (
-                <div key={s.id} className="transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm rounded-lg p-2 hover:bg-slate-50 cursor-pointer" onClick={() => navigate("/admin/edt")}>
+                <div key={s.id} className="transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm rounded-lg p-2 hover:bg-slate-50 cursor-pointer dark:hover:bg-slate-800/50" onClick={() => navigate("/admin/edt")}>
                   <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-700">
-                      {s.numero} <span className="text-slate-400">(Bât. {s.batiment})</span>
-                      {!s.disponible && <span className="ml-2 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">Indispo</span>}
+                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                      {s.numero} <span className="text-slate-400 dark:text-slate-500">(Bât. {s.batiment})</span>
+                      {!s.disponible && <span className="ml-2 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:bg-red-900/30 dark:text-red-300">Indispo</span>}
                     </span>
-                    <span className={`font-semibold tabular-nums ${s.occupationCalculee > 90 ? "text-red-600" : s.occupationCalculee > 70 ? "text-orange-500" : "text-slate-500"}`}>
+                    <span className={`font-semibold tabular-nums ${s.occupationCalculee > 90 ? "text-red-600 dark:text-red-400" : s.occupationCalculee > 70 ? "text-orange-500 dark:text-orange-400" : "text-slate-500 dark:text-slate-400"}`}>
                       {s.occupationCalculee}%
                     </span>
                   </div>
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         s.occupationCalculee > 90 ? "bg-red-500" : s.occupationCalculee > 70 ? "bg-orange-400" : "bg-emit-blue"
@@ -275,7 +275,7 @@ export default function AdminDashboard() {
               ))
             )}
             {salles.length > 5 && (
-              <button onClick={() => navigate("/admin/salles")} className="flex items-center gap-1 text-xs font-medium text-emit-sky hover:text-emit-navy transition-colors">
+              <button onClick={() => navigate("/admin/salles")} className="flex items-center gap-1 text-xs font-medium text-emit-sky hover:text-emit-navy dark:hover:text-white transition-colors">
                 Voir toutes les salles <ArrowRight className="h-3 w-3" />
               </button>
             )}
@@ -287,28 +287,28 @@ export default function AdminDashboard() {
           <CardHeader title="Activité récente" subtitle="Dernières actions" />
           <CardBody>
             {journal.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+              <div className="flex flex-col items-center justify-center py-8 text-slate-400 dark:text-slate-500">
                 <CalendarDays className="h-8 w-8 mb-2" />
                 <p className="text-sm">Aucune activité récente</p>
               </div>
             ) : (
               <ul className="space-y-3">
                 {journal.slice(0, 6).map((j) => (
-                  <li key={j.id} className="flex items-start gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:bg-slate-50 rounded-lg p-2 cursor-default">
-                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emit-light text-xs text-emit-navy font-bold">
+                  <li key={j.id} className="flex items-start gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:bg-slate-50 rounded-lg p-2 cursor-default dark:hover:bg-slate-800/50">
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emit-light text-xs text-emit-navy font-bold dark:bg-slate-700 dark:text-emit-sky">
                       {j.action[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-700 truncate">
+                      <p className="text-sm text-slate-700 truncate dark:text-slate-300">
                         <span className="font-medium">{j.action}</span> — {j.entite}
                       </p>
-                      <p className="text-[11px] text-slate-400">{j.date}</p>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">{j.date}</p>
                     </div>
                   </li>
                 ))}
               </ul>
             )}
-            <button onClick={() => navigate("/admin/historique")} className="mt-3 flex items-center gap-1 text-xs font-medium text-emit-sky hover:text-emit-navy transition-colors">
+            <button onClick={() => navigate("/admin/historique")} className="mt-3 flex items-center gap-1 text-xs font-medium text-emit-sky hover:text-emit-navy dark:hover:text-white transition-colors">
               Voir tout l'historique <ArrowRight className="h-3 w-3" />
             </button>
           </CardBody>

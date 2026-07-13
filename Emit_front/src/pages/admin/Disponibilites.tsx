@@ -234,22 +234,22 @@ export default function AdminDisponibilites() {
       )}
 
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-slate-900">Disponibilités des enseignants</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Disponibilités des enseignants</h1>
         <div className="flex items-center gap-3 flex-wrap">
           <select value={enseignantId} onChange={(e) => setEnseignantId(e.target.value)}
-            className="h-10 min-w-[200px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            className="h-10 min-w-[200px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
             {enseignants.map(ens => (
               <option key={ens.id} value={ens.id}>{ens.prenom} {ens.nom}</option>
             ))}
           </select>
           <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)}
-            className="h-10 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            className="h-10 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
             {semestres.map(s => (
               <option key={s.id} value={s.id}>{s.libelle} — {s.annee}</option>
             ))}
           </select>
           <select value={coursId} onChange={(e) => setCoursId(e.target.value)}
-            className="h-10 min-w-[220px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            className="h-10 min-w-[220px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
             {mesCours.map(c => (
               <option key={c.id} value={c.id}>{c.intitule} — {c.niveauLibelle}</option>
             ))}
@@ -266,19 +266,19 @@ export default function AdminDisponibilites() {
       </div>
 
       {enseignantActuel && (
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <User className="h-4 w-4 text-emit-sky" />
           <span><strong>{enseignantActuel.prenom} {enseignantActuel.nom}</strong></span>
           {coursActuel && (
             <>
-              <span className="text-slate-400">·</span>
+              <span className="text-slate-400 dark:text-slate-500">·</span>
               <BookOpen className="h-4 w-4 text-emit-sky" />
               <span>{coursActuel.intitule}</span>
               <Badge tone="blue">{coursActuel.niveauLibelle}</Badge>
             </>
           )}
           {loadingAutres && (
-            <span className="text-xs text-slate-400 inline-flex items-center gap-1">
+            <span className="text-xs text-slate-400 dark:text-slate-500 inline-flex items-center gap-1">
               <Loader2 className="h-3 w-3 animate-spin" /> vérification des chevauchements…
             </span>
           )}
@@ -286,17 +286,17 @@ export default function AdminDisponibilites() {
       )}
 
       {saved && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700">
+        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
           <CheckCircle2 className="h-4 w-4 shrink-0" /> ✓ Disponibilités enregistrées avec succès
         </div>
       )}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
           <XCircle className="h-4 w-4 shrink-0" /> {error}
         </div>
       )}
       {conflits.length > 0 && (
-        <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
           <div className="flex items-center gap-2 font-medium">
             <AlertTriangle className="h-4 w-4 shrink-0" /> Conflit entre deux cours de cet enseignant
           </div>
@@ -311,13 +311,13 @@ export default function AdminDisponibilites() {
       <Card>
         <CardBody className="space-y-4">
           <div className="flex flex-wrap items-center gap-4 text-xs">
-            <span className="font-medium text-slate-700">Légende :</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">Légende :</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-green-500 shadow-sm" />Disponible</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-red-500 shadow-sm" />Indisponible</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-slate-200 border border-slate-300" />Non renseigné</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-slate-200 dark:bg-slate-600 border border-slate-300 dark:border-slate-500" />Non renseigné</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-green-100 border-2 border-amber-500" />Chevauchement</span>
-            <span className="text-slate-400">·</span>
-            <span className="text-slate-500">Cliquez sur une case pour basculer</span>
+            <span className="text-slate-400 dark:text-slate-500">·</span>
+            <span className="text-slate-500 dark:text-slate-400">Cliquez sur une case pour basculer</span>
             {changed && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 animate-pulse ml-2">
                 <AlertTriangle className="h-3 w-3" /> Non sauvegardé
@@ -329,15 +329,15 @@ export default function AdminDisponibilites() {
             <div className="flex items-center justify-center py-16">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-emit-sky" />
-                <p className="text-sm text-slate-500">Chargement des données...</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Chargement des données...</p>
               </div>
             </div>
           ) : enseignants.length === 0 ? (
-            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
+            <div className="flex items-center justify-center py-16 text-sm text-slate-500 dark:text-slate-400">
               Aucun enseignant en base. Ajoutez-en un depuis la page "Enseignants".
             </div>
           ) : mesCours.length === 0 ? (
-            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
+            <div className="flex items-center justify-center py-16 text-sm text-slate-500 dark:text-slate-400">
               Aucun cours n'est assigné à {enseignantActuel ? `${enseignantActuel.prenom} ${enseignantActuel.nom}` : "cet enseignant"}.
             </div>
           ) : loading ? (
@@ -348,15 +348,15 @@ export default function AdminDisponibilites() {
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
               <table className="w-full min-w-[700px] border-collapse text-sm">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-10 bg-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-600 border-r border-slate-200">
+                    <th className="sticky left-0 z-10 bg-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-600 border-r border-slate-200 dark:bg-slate-700/80 dark:text-slate-300 dark:border-slate-600">
                       <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> Créneaux</div>
                     </th>
                     {JOURS.map((jour, idx) => (
-                      <th key={jour} className={`px-3 py-3 text-center text-xs font-semibold border-b-2 ${idx === new Date().getDay() - 1 ? "bg-emit-light/60 text-emit-navy border-b-emit-sky" : "bg-slate-50 text-slate-600 border-b-slate-200"}`}>
+                      <th key={jour} className={`px-3 py-3 text-center text-xs font-semibold border-b-2 dark:border-b-slate-600 ${idx === new Date().getDay() - 1 ? "bg-emit-light/60 text-emit-navy border-b-emit-sky dark:bg-emit-navy-dark/60 dark:text-emit-sky" : "bg-slate-50 text-slate-600 border-b-slate-200 dark:bg-slate-800/50 dark:text-slate-300"}`}>
                         {jour}
                       </th>
                     ))}
@@ -365,14 +365,14 @@ export default function AdminDisponibilites() {
                 <tbody>
                   {CRENEAUX.map((c, r) => (
                     <tr key={c} className="group">
-                      <td className="sticky left-0 z-10 bg-slate-50/90 px-3 py-2.5 text-xs font-mono text-slate-600 border-r border-slate-200 font-medium">{c}</td>
+                      <td className="sticky left-0 z-10 bg-slate-50/90 px-3 py-2.5 text-xs font-mono text-slate-600 border-r border-slate-200 font-medium dark:bg-slate-800/90 dark:text-slate-300 dark:border-slate-600">{c}</td>
                       {JOURS.map((j, ci) => {
                         const v = grid[r][ci];
                         const isDispo = v === "dispo";
                         const isIndispo = v === "indispo";
                         const isOverlap = overlapSet.has(overlapKey(r, ci));
                         return (
-                          <td key={j} className="border border-slate-100 p-1">
+                          <td key={j} className="border border-slate-100 p-1 dark:border-slate-700">
                             <button onClick={() => toggle(r, ci)}
                               className={`relative h-10 w-full rounded-lg border-2 transition-all duration-150 ${
                                 isOverlap ? "bg-green-100 border-amber-500 ring-2 ring-amber-400 hover:bg-green-200"
@@ -395,17 +395,17 @@ export default function AdminDisponibilites() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700">
+          <div className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             Une indisponibilité créant un conflit avec un cours planifié sera signalée à l'admin.
           </div>
 
           <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-600">
-              Total cette semaine : <strong className="text-emit-navy text-lg">{totalHours}h</strong>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Total cette semaine : <strong className="text-emit-navy text-lg dark:text-emit-sky">{totalHours}h</strong>
             </p>
             {changed && (
-              <span className="text-xs text-amber-600 font-medium">Modifications non enregistrées</span>
+              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Modifications non enregistrées</span>
             )}
           </div>
         </CardBody>

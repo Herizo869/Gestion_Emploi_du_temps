@@ -83,8 +83,8 @@ export default function AdminNiveaux() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Niveaux & Filières</h1>
-          <p className="text-sm text-slate-500">Hiérarchie académique</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Niveaux & Filières</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Hiérarchie académique</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" leftIcon={<Plus className="h-4 w-4" />} onClick={() => openAddFiliere()}>
@@ -97,7 +97,7 @@ export default function AdminNiveaux() {
       </div>
 
       {niveaux.length === 0 && (
-        <p className="text-sm text-slate-400">Aucun niveau créé.</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500">Aucun niveau créé.</p>
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -107,13 +107,13 @@ export default function AdminNiveaux() {
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Badge tone="navy">{n.libelle}</Badge>
-                  <span className="text-sm text-slate-500">
+                  <span className="text-sm text-slate-500 dark:text-slate-400">
                     Effectif max : <strong>{n.effectifMax}</strong>
                   </span>
                 </div>
                 {/* Suppression niveau désactivée — pas d'endpoint DELETE côté backend */}
                 <button
-                  className="rounded p-1.5 hover:bg-slate-100"
+                  className="rounded p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
                   title="Ajouter une filière à ce niveau"
                   onClick={() => openAddFiliere(n.id)}
                 >
@@ -122,25 +122,25 @@ export default function AdminNiveaux() {
               </div>
 
               <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                <ChevronDown className="h-3 w-3" /> Filières ({n.filieres.length})
+                <ChevronDown className="h-3 w-3 dark:text-slate-400" /> Filières ({n.filieres.length})
               </div>
 
               <ul className="space-y-2">
                 {n.filieres.length === 0 && (
-                  <li className="text-xs text-slate-400 px-1">Aucune filière</li>
+                  <li className="text-xs text-slate-400 dark:text-slate-500 px-1">Aucune filière</li>
                 )}
                 {n.filieres.map((f) => (
-                  <li key={f.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
+                  <li key={f.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 dark:border-slate-700 dark:bg-slate-800/60">
                     <div>
-                      <p className="text-sm font-medium text-slate-800">{f.libelle}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{f.libelle}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {f.description} — <span className="tabular-nums">{f.nbCours}</span> cours
                       </p>
                     </div>
                     {/* Suppression filière désactivée — pas d'endpoint DELETE côté backend */}
                     <div className="flex gap-1">
                       <button
-                        className="rounded p-1.5 hover:bg-red-100"
+                        className="rounded p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30"
                         title="Supprimer la filière"
                         onClick={() => setConfirmF(f)}
                       >
@@ -170,15 +170,15 @@ export default function AdminNiveaux() {
         }
       >
         {errorN && (
-          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{errorN}</p>
+          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">{errorN}</p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-sm font-medium">Libellé</label>
+            <label className="mb-1.5 block text-sm font-medium dark:text-slate-300">Libellé</label>
             <select
               value={libelle}
               onChange={e => setLibelle(e.target.value as any)}
-              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
             >
               <option>L1</option><option>L2</option><option>L3</option>
               <option>M1</option><option>M2</option>
@@ -208,7 +208,7 @@ export default function AdminNiveaux() {
         }
       >
         {errorF && (
-          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{errorF}</p>
+          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">{errorF}</p>
         )}
         <div className="grid gap-3">
           <Input
@@ -224,11 +224,11 @@ export default function AdminNiveaux() {
             onChange={e => setFDesc(e.target.value)}
           />
           <div>
-            <label className="mb-1.5 block text-sm font-medium">Niveau parent</label>
+            <label className="mb-1.5 block text-sm font-medium dark:text-slate-300">Niveau parent</label>
             <select
               value={fNiveauId}
               onChange={e => setFNiveauId(e.target.value)}
-              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
             >
               <option value="">— Sélectionner —</option>
               {niveaux.map(n => <option key={n.id} value={n.id}>{n.libelle}</option>)}
@@ -249,10 +249,10 @@ export default function AdminNiveaux() {
       >
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" />
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-slate-700 dark:text-slate-300">
             Supprimer la filière <strong>{confirmF?.libelle}</strong> ?
             {(confirmF?.nbCours ?? 0) > 0 && (
-              <span className="block mt-1 text-orange-600 text-xs">
+              <span className="block mt-1 text-orange-600 dark:text-orange-400 text-xs">
                 Cette filière contient {confirmF?.nbCours} cours qui seront également supprimés.
               </span>
             )}

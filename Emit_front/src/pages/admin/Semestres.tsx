@@ -50,11 +50,11 @@ export default function AdminSemestres() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-slate-900">Semestres</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Semestres</h1>
 
       {/* Liste des semestres */}
       {semestres.length === 0 ? (
-        <p className="text-sm text-slate-400">Aucun semestre créé.</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500">Aucun semestre créé.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
           {semestres.map((s) => (
@@ -62,13 +62,13 @@ export default function AdminSemestres() {
               <CardBody>
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">{s.libelle}</p>
-                    <p className="text-xs text-slate-500">{s.annee}</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{s.libelle}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{s.annee}</p>
                   </div>
                   <Badge tone={statutTone[s.statut]}>{s.statut}</Badge>
                 </div>
                 {s.datePublication && (
-                  <p className="mt-3 text-xs text-slate-500">Publié le {s.datePublication}</p>
+                  <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Publié le {s.datePublication}</p>
                 )}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button
@@ -108,7 +108,7 @@ export default function AdminSemestres() {
         <CardHeader title="Créer un semestre" subtitle="Configuration des créneaux" />
         <CardBody>
           {error && (
-            <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+            <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">{error}</p>
           )}
           <div className="grid gap-3 sm:grid-cols-3">
             <Input
@@ -131,7 +131,7 @@ export default function AdminSemestres() {
             <p className="mb-2 text-sm font-medium">Jours ouvrés</p>
             <div className="flex flex-wrap gap-2">
               {JOURS.map((j) => (
-                <label key={j} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1 text-sm cursor-pointer hover:bg-slate-50">
+                <label key={j} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1 text-sm cursor-pointer hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
                   <input type="checkbox" defaultChecked /> {j}
                 </label>
               ))}
@@ -151,8 +151,7 @@ export default function AdminSemestres() {
         <CardBody>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+              <thead>                  <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-slate-700 dark:text-slate-400">
                   <th className="py-2 pr-3">Jour</th>
                   <th className="py-2 pr-3">Créneau</th>
                 </tr>
@@ -160,9 +159,9 @@ export default function AdminSemestres() {
               <tbody>
                 {JOURS.flatMap((j) =>
                   CRENEAUX.map((c) => (
-                    <tr key={j + c} className="border-b border-slate-50">
+                    <tr key={j + c} className="border-b border-slate-50 dark:border-slate-700">
                       <td className="py-2 pr-3 font-medium">{j}</td>
-                      <td className="py-2 pr-3 font-mono text-slate-600">{c}</td>
+                      <td className="py-2 pr-3 font-mono text-slate-600 dark:text-slate-400">{c}</td>
                     </tr>
                   ))
                 )}

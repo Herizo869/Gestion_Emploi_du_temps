@@ -157,7 +157,7 @@ export default function AdminProfil() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-slate-900">Mon profil</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Mon profil</h1>
 
       {/* Carte identité avec avatar */}
       <Card>
@@ -210,18 +210,18 @@ export default function AdminProfil() {
 
             {/* Infos identité */}
             <div className="min-w-0 flex-1">
-              <p className="text-lg font-semibold text-slate-900 truncate">{displayName}</p>
-              <p className="text-sm text-slate-500">
+              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">{displayName}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Administrateur
                 {" · "}
                 <Badge tone="navy">Admin</Badge>
               </p>
-              <p className="mt-0.5 text-xs text-slate-400">{user?.email}</p>
+              <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{user?.email}</p>
             </div>
 
             {/* Upload status */}
             {uploadError && (
-              <div className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+              <div className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
                 {uploadError}
               </div>
             )}
@@ -240,12 +240,12 @@ export default function AdminProfil() {
         <CardHeader title="Informations personnelles" />
         <CardBody className="space-y-4">
           {savedProfile && (
-            <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 flex items-center gap-2">
+            <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 flex items-center gap-2 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
               ✓ Profil enregistré avec succès
             </div>
           )}
           {profileError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
               {profileError}
             </div>
           )}
@@ -273,12 +273,12 @@ export default function AdminProfil() {
             <Input label="Nouveau mot de passe" type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
             <div className="grid grid-cols-4 gap-1">
               {[0, 1, 2, 3].map(i => (
-                <span key={i} className={`h-1.5 rounded-full transition-all ${i < s ? colors[s - 1] : "bg-slate-200"}`} />
+                <span key={i} className={`h-1.5 rounded-full transition-all ${i < s ? colors[s - 1] : "bg-slate-200 dark:bg-slate-600"}`} />
               ))}
             </div>
             <Input label="Confirmation" type="password" value={confPwd} onChange={e => setConfPwd(e.target.value)} />
             {pwdMsg && (
-              <div className={`rounded-lg px-3 py-2 text-sm ${pwdMsg.ok ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+              <div className={`rounded-lg px-3 py-2 text-sm ${pwdMsg.ok ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800" : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800"}`}>
                 {pwdMsg.text}
               </div>
             )}
