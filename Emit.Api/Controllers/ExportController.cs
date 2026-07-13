@@ -40,14 +40,6 @@ public class ExportController : ControllerBase
         _ => j.ToString()
     };
 
-    private static string TypeCoursFr(CoursType t) => t switch
-    {
-        CoursType.CM => "Cours Magistral",
-        CoursType.TD => "Travaux Diriges",
-        CoursType.TP => "Travaux Pratiques",
-        _ => t.ToString()
-    };
-
     private static string TypeSalleFr(TypeSalle t) => t switch
     {
         TypeSalle.Cours => "Cours",
@@ -72,6 +64,14 @@ public class ExportController : ControllerBase
     private static readonly Color NavyLight = Color.FromHex("#E8EDF5");
     private static readonly Color EmeraldLight = Color.FromHex("#D1FAE5");
     private static readonly Color EmeraldFg = Color.FromHex("#047857");
+
+    private static Color TypeBg(CoursType t) => t switch
+    {
+        CoursType.CM => NavyLight,
+        CoursType.TD => SkyLight,
+        CoursType.TP => EmeraldLight,
+        _ => Colors.Grey.Lighten3
+    };
 
     private static Color TypeFg(CoursType t) => t switch
     {
@@ -182,73 +182,85 @@ public class ExportController : ControllerBase
                         });
                 });
 
-                page.Content().PaddingTop(5).Table(table =>
+                page.Content().PaddingTop(5).Column(col =>
                 {
-                    if (isLandscape)
-                        table.ColumnsDefinition(c =>
+                    // Grouper les creneaux par jour
+                    var groupes = slots.GroupBy(s => s.Jour).OrderBy(g => g.Key);
+
+                    foreach (var groupe in groupes)
+                    {
+                        // ── EN-TETE DU JOUR (barre colorée) ──
+                        col.Item().Background(Navy).Padding(6).Row(r =>
                         {
-                            c.RelativeColumn(0.9f);
-                            c.RelativeColumn(1.2f);
-                            c.RelativeColumn(3.0f);
-                            c.RelativeColumn(0.8f);
-                            c.RelativeColumn(2.0f);
-                            c.RelativeColumn(0.8f);
-                        });
-                    else
-                        table.ColumnsDefinition(c =>
-                        {
-                            c.RelativeColumn(0.9f);
-                            c.RelativeColumn(1.1f);
-                            c.RelativeColumn(2.5f);
-                            c.RelativeColumn(0.7f);
-                            c.RelativeColumn(1.6f);
-                            c.RelativeColumn(0.7f);
+                            r.AutoItem().Text(JourFr(groupe.Key))
+                                .FontSize(11).Bold().FontColor(Colors.White);
+                            r.RelativeItem().AlignRight().Text($"{groupe.Count()} creneau{(groupe.Count() > 1 ? "x" : "")}")
+                                .FontSize(8).FontColor(Sky);
                         });
 
-                    void HeaderCell(string text)
-                    {
-                        table.Cell().Background(Navy).Padding(5).Text(text)
-                            .FontSize(8).Bold().FontColor(Colors.White).AlignCenter();
-                    }
-                    HeaderCell("Jour");
-                    HeaderCell("Horaire");
-                    HeaderCell("Cours");
-                    HeaderCell("Type");
-                    HeaderCell("Enseignant");
-                    HeaderCell("Salle");
+                        // ── GRILLE DE CARTES (2 colonnes si paysage, 1 sinon) ──
+                        var slotsJour = groupe.OrderBy(s => s.HeureDebut).ToList();
+                        var colsParLigne = isLandscape ? 3 : 2;
 
-                    var ligneIdx = 0;
-                    Jour? dernierJour = null;
-
-                    foreach (var s in slots)
-                    {
-                        var bg = ligneIdx % 2 == 0
-                            ? Colors.White
-                            : Color.FromHex("#F8FAFC");
-
-                        if (dernierJour.HasValue && dernierJour != s.Jour)
+                        for (int i = 0; i < slotsJour.Count; i += colsParLigne)
                         {
-                            for (int i = 0; i < 6; i++)
-                                table.Cell().Background(bg).Padding(2).Text("");
-                            ligneIdx++;
-                            bg = ligneIdx % 2 == 0 ? Colors.White : Color.FromHex("#F8FAFC");
+                            var ligne = slotsJour.Skip(i).Take(colsParLigne).ToList();
+                            col.Item().Row(ligneRow =>
+                            {
+                                foreach (var slot in ligne)
+                                {
+                                    var typeBg = TypeBg(slot.Cours.Type);
+                                    var typeFg = TypeFg(slot.Cours.Type);
+
+                                    ligneRow.RelativeItem().Padding(3).
+                                        Border(1).BorderColor(Color.FromHex("#CBD5E1")).
+                                        Background(Colors.White).Column(card =>
+                                    {
+                                        // ── HAUT DE LA CARTE : heure + type badge ──
+                                        card.Item().Background(typeBg).Padding(4).Row(top =>
+                                        {
+                                            top.RelativeItem().Text(string.Format("{0:HH:mm} - {1:HH:mm}", slot.HeureDebut, slot.HeureFin))
+                                                .FontSize(9).Bold().FontColor(typeFg);
+                                            top.AutoItem().Background(Colors.White).PaddingHorizontal(5).PaddingVertical(1)
+                                                .Text(slot.Cours.Type.ToString()).FontSize(7).Bold().FontColor(typeFg).AlignCenter();
+                                        });
+
+                                        // ── INTITULE DU COURS ──
+                                        card.Item().PaddingHorizontal(4).PaddingTop(3).Text(slot.Cours.Intitule)
+                                            .FontSize(9).Bold().FontColor(Navy);
+
+                                        // ── ENSEIGNANT ──
+                                        card.Item().PaddingHorizontal(4).PaddingTop(1).Text(t =>
+                                        {
+                                            t.Span("Par ").FontSize(7).FontColor(Colors.Grey.Darken1);
+                                            t.Span($"{slot.Enseignant.Prenom} {slot.Enseignant.Nom}")
+                                                .FontSize(8).FontColor(Colors.Grey.Darken3).SemiBold();
+                                        });
+
+                                        // ── SALLE ──
+                                        card.Item().PaddingHorizontal(4).PaddingBottom(4).PaddingTop(1).Text(t =>
+                                        {
+                                            t.Span("Salle ").FontSize(7).FontColor(Colors.Grey.Darken1);
+                                            t.Span(slot.Salle.Numero).FontSize(8).FontColor(Colors.Grey.Darken3).SemiBold();
+                                            if (!string.IsNullOrWhiteSpace(slot.Salle.Batiment))
+                                            {
+                                                t.Span(" - ").FontSize(7).FontColor(Colors.Grey.Darken1);
+                                                t.Span(slot.Salle.Batiment).FontSize(7).FontColor(Colors.Grey.Darken1);
+                                            }
+                                        });
+                                    });
+
+                                    // Espacement entre cartes (via Padding sur RelativeItem)
+                                }
+
+                                // Completer les colonnes vides
+                                for (int j = ligne.Count; j < colsParLigne; j++)
+                                    ligneRow.RelativeItem();
+                            });
                         }
-                        dernierJour = s.Jour;
 
-                        table.Cell().Background(bg).Padding(3).Text(JourFr(s.Jour))
-                            .FontSize(8).FontColor(Navy).SemiBold();
-                        table.Cell().Background(bg).Padding(3).Text(string.Format("{0:HH:mm} - {1:HH:mm}", s.HeureDebut, s.HeureFin))
-                            .FontSize(8).FontColor(Colors.Grey.Darken2).AlignCenter();
-                        table.Cell().Background(bg).Padding(3).Text(s.Cours.Intitule)
-                            .FontSize(8).FontColor(Colors.Black);
-                        table.Cell().Background(bg).Padding(3).Text(s.Cours.Type.ToString())
-                            .FontSize(7).Bold().FontColor(TypeFg(s.Cours.Type)).AlignCenter();
-                        table.Cell().Background(bg).Padding(3).Text($"{s.Enseignant.Prenom} {s.Enseignant.Nom}")
-                            .FontSize(8).FontColor(Colors.Grey.Darken3);
-                        table.Cell().Background(bg).Padding(3).Text(s.Salle.Numero)
-                            .FontSize(8).FontColor(Colors.Grey.Darken2).AlignCenter();
-
-                        ligneIdx++;
+                        // Espace entre les jours
+                        col.Item().Height(6);
                     }
                 });
 
