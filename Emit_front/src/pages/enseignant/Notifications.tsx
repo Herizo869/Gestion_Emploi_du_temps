@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Bell, CheckCheck, Calendar, BookOpen, Settings as SettingsIcon, AlertTriangle, Clock, MapPin } from "lucide-react";
+import { Bell, CheckCheck, Calendar, BookOpen, Settings as SettingsIcon, AlertTriangle, Clock, MapPin, EyeOff } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useData } from "@/context/DataContext";
+import { getPreferences, type NotifType } from "@/lib/preferences";
 
 const NOTIF_CONFIG: Record<string, { icon: React.ReactNode; bg: string; text: string }> = {
   planning: { icon: <Calendar className="h-4 w-4" />, bg: "bg-red-100", text: "text-red-700" },
@@ -20,7 +21,13 @@ export default function EnsNotifications() {
   const { notifications: list, setNotifications: setList } = useData();
   const [filter, setFilter] = useState<string>("");
 
-  const shown = filter ? list.filter(n => n.type === filter) : list;
+  // Appliquer les préférences utilisateur + filtre manuel
+  const prefs = getPreferences();
+  const filteredByPrefs = list.filter(n => prefs.notifications[n.type as NotifType] !== false);
+  const shown = filter
+    ? filteredByPrefs.filter(n => n.type === filter)
+    : filteredByPrefs;
+  const hiddenCount = list.length - filteredByPrefs.length;
 
   const markAll = () => setList(list.map(n => ({ ...n, lu: true })));
   const markOne = (id: string) => setList(list.map(n => (n.id === id ? { ...n, lu: true } : n)));
@@ -50,6 +57,12 @@ export default function EnsNotifications() {
 
       <Card>
         <CardBody className="space-y-2">
+          {hiddenCount > 0 && (
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-500">
+              <EyeOff className="h-3.5 w-3.5 shrink-0" />
+              <span>{hiddenCount} notification{hiddenCount > 1 ? "s" : ""} masquée{hiddenCount > 1 ? "s" : ""} par vos préférences — <button onClick={() => window.location.href = "/enseignant/parametres"} className="text-emit-sky underline hover:no-underline">Paramètres</button></span>
+            </div>
+          )}
           {shown.length === 0 && (
             <div className="grid place-items-center py-10 text-slate-400">
               <Bell className="h-8 w-8" /><p className="mt-2 text-sm">Aucune notification</p>

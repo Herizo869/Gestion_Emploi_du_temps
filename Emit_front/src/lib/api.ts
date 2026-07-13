@@ -71,6 +71,7 @@ export interface AuthResponse {
 }
 export const apiLogin = (email: string, password: string) =>
   request<AuthResponse>("/api/auth/login", {
+
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
@@ -101,6 +102,9 @@ export const apiUpdateSalle = (id: string, s: Partial<Salle>) =>
   request<Salle>(`/api/salles/${id}`, { method: "PUT", body: JSON.stringify(s) });
 export const apiDeleteSalle = (id: string) =>
   request<void>(`/api/salles/${id}`, { method: "DELETE" });
+
+export const apiRecalculateOccupation = () =>
+  request<Salle[]>("/api/salles/recalculate-occupation", { method: "POST" });
 
 // ───── Niveaux & Filières ──────────────────────────────────
 export const apiNiveaux = () => request<Niveau[]>("/api/niveaux");
@@ -208,6 +212,37 @@ export const apiConflitsDispos = (enseignantId: string, semestreId: string) =>
 export interface ExportParams { semestreId?: string; niveauId?: string; filiereId?: string; salleId?: string; orientation?: "portrait" | "paysage"; }
 
 export interface EdtCheckParams { enseignantId: string; semestreId: string; }
+
+// ───── Paramètres Système (Admin) ────────────────────────
+
+export interface SystemSettingsData {
+  etablissementNom: string;
+  etablissementSousTitre: string;
+  emailEnabled: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  fromEmail: string;
+  fromName: string;
+  loginUrl: string;
+  pwdMinLength: number;
+  pwdRequireUppercase: boolean;
+  pwdRequireDigit: boolean;
+  pwdRequireSpecial: boolean;
+}
+
+
+export const apiGetSettings = () =>
+  request<SystemSettingsData>("/api/settings");
+
+export const apiUpdateSettings = (data: SystemSettingsData) =>
+  request<SystemSettingsData>("/api/settings", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+
+// ───── Vérification EDT enseignant ─────────────────────────
 
 export const apiGetEdt = (params: EdtCheckParams) =>
   request<SlotEDT[]>(`/api/edt?enseignantId=${params.enseignantId}&semestreId=${params.semestreId}`);
