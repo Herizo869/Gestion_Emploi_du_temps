@@ -1,5 +1,6 @@
 using Emit.Api.Data;
 using Emit.Api.Entities;
+using Emit.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,8 @@ public class ConflitDispoDto
 public class DisponibilitesController : ControllerBase
 {
     private readonly AppDbContext _db;
-    public DisponibilitesController(AppDbContext db) { _db = db; }
+    private readonly INotificationPusher _pusher;
+    public DisponibilitesController(AppDbContext db, INotificationPusher pusher) { _db = db; _pusher = pusher; }
 
     // Parse "07h00 - 08h00" -> (07:00, 08:00)
     private static bool TryParseCreneau(string creneau, out TimeOnly debut, out TimeOnly fin)
@@ -78,18 +80,63 @@ public class DisponibilitesController : ControllerBase
         return conflits;
     }
 
+    // Vérifie, AVANT sauvegarde, si les nouvelles disponibilités (dtos) pour ce cours
+    // chevauchent une disponibilité "verte" déjà enregistrée sur un AUTRE cours DU MÊME
+    // NIVEAU ET DU MÊME PARCOURS (filière) — peu importe l'enseignant. Les étudiants de
+    // ce niveau/parcours ne peuvent pas suivre 2 cours en même temps.
+    private async Task<List<ConflitDispoDto>> DetecterConflitsMemeNiveauFiliereAsync(
+        Guid semestreId, Cours coursActuel, List<DispoDto> dtos)
+    {
+        var autresDispos = await _db.Disponibilites
+            .Include(d => d.Cours)
+            .Where(d => d.SemestreId == semestreId
+                     && d.CoursId != coursActuel.Id
+                     && d.EstDisponible
+                     && d.Cours.NiveauId == coursActuel.NiveauId
+                     && d.Cours.FiliereId == coursActuel.FiliereId)
+            .ToListAsync();
+
+        if (autresDispos.Count == 0) return new List<ConflitDispoDto>();
+
+        var conflits = new List<ConflitDispoDto>();
+
+        foreach (var d in dtos.Where(d => d.EstDisponible))
+        {
+            if (!TryParseCreneau(d.Creneau, out var da, out var fa)) continue;
+
+            foreach (var autre in autresDispos)
+            {
+                if (autre.Jour != d.Jour) continue;
+                if (!TryParseCreneau(autre.Creneau, out var db_, out var fb)) continue;
+
+                if (da < fb && db_ < fa)
+                {
+                    conflits.Add(new ConflitDispoDto
+                    {
+                        Jour = d.Jour,
+                        Creneau = $"{d.Creneau} / {autre.Creneau}",
+                        Cours1 = coursActuel.Intitule,
+                        Cours2 = autre.Cours.Intitule,
+                    });
+                }
+            }
+        }
+        return conflits;
+    }
+
     // Retire de l'EDT tout créneau déjà planifié pour cet enseignant SUR CE COURS qui chevauche
     // une plage qu'il vient de déclarer indisponible, et notifie les admins.
-    private async Task LibererCreneauxIndisponiblesAsync(Guid enseignantId, Guid coursId, Guid semestreId, List<DispoDto> dtos)
+    // Retourne les notifications créées (pas encore poussées en temps réel — voir appelant).
+    private async Task<List<Notification>> LibererCreneauxIndisponiblesAsync(Guid enseignantId, Guid coursId, Guid semestreId, List<DispoDto> dtos)
     {
         var indispos = dtos.Where(d => d.EstIndisponible).ToList();
-        if (indispos.Count == 0) return;
+        if (indispos.Count == 0) return new List<Notification>();
 
         var slots = await _db.Slots
             .Include(s => s.Cours)
             .Where(s => s.EnseignantId == enseignantId && s.CoursId == coursId && s.SemestreId == semestreId)
             .ToListAsync();
-        if (slots.Count == 0) return;
+        if (slots.Count == 0) return new List<Notification>();
 
         var aLiberer = new List<SlotEDT>();
         foreach (var slot in slots)
@@ -105,23 +152,27 @@ public class DisponibilitesController : ControllerBase
                 }
             }
         }
-        if (aLiberer.Count == 0) return;
+        if (aLiberer.Count == 0) return new List<Notification>();
 
         _db.Slots.RemoveRange(aLiberer);
 
         var enseignant = await _db.Enseignants.FindAsync(enseignantId);
         var admins = await _db.Users.Where(u => u.Role == Role.Admin).ToListAsync();
+        var notificationsCreees = new List<Notification>();
+
         foreach (var slot in aLiberer)
         {
             foreach (var admin in admins)
             {
-                _db.Notifications.Add(new Notification
+                var notif = new Notification
                 {
                     Type = NotifType.Planning,
                     Titre = "Créneau libéré automatiquement",
                     Description = $"{enseignant?.Prenom} {enseignant?.Nom} s'est déclaré(e) indisponible le {slot.Jour} à {slot.HeureDebut:HH\\:mm} pour \"{slot.Cours?.Intitule}\" — le créneau a été retiré de l'EDT et doit être replanifié.",
                     UserId = admin.Id
-                });
+                };
+                _db.Notifications.Add(notif);
+                notificationsCreees.Add(notif);
             }
 
             _db.Journal.Add(new LogEntry
@@ -130,6 +181,27 @@ public class DisponibilitesController : ControllerBase
                 Entite = $"Créneau {slot.Cours?.Intitule} ({slot.Jour} {slot.HeureDebut:HH\\:mm}) libéré — indisponibilité déclarée"
             });
         }
+
+        return notificationsCreees;
+    }
+
+    // Notifie tous les admins (persisté + push temps réel) qu'un conflit a été détecté.
+    private async Task NotifierAdminsConflitAsync(string titre, string description)
+    {
+        var admins = await _db.Users.Where(u => u.Role == Role.Admin).ToListAsync();
+        if (admins.Count == 0) return;
+
+        var notifs = admins.Select(a => new Notification
+        {
+            Type = NotifType.Planning,
+            Titre = titre,
+            Description = description,
+            UserId = a.Id
+        }).ToList();
+
+        _db.Notifications.AddRange(notifs);
+        await _db.SaveChangesAsync();
+        await _pusher.PushManyAsync(notifs);
     }
 
     // GET /api/disponibilites/{enseignantId}?semestreId=...&coursId=... — Admin
@@ -169,6 +241,18 @@ public class DisponibilitesController : ControllerBase
             return Conflict(new { message = "Chevauchement détecté avec un autre cours de cet enseignant.", conflits });
         }
 
+        // Vérifie le chevauchement avec un AUTRE cours du même niveau et du même parcours
+        // (conflit d'emploi du temps pour les étudiants, peu importe l'enseignant).
+        var conflitsNiveau = await DetecterConflitsMemeNiveauFiliereAsync(semestreId, cours, dtos);
+        if (conflitsNiveau.Count > 0)
+        {
+            return Conflict(new
+            {
+                message = "Chevauchement détecté avec un autre cours du même niveau et du même parcours : les étudiants ne peuvent pas suivre les deux cours en même temps.",
+                conflits = conflitsNiveau
+            });
+        }
+
         var existing = await _db.Disponibilites
             .Where(d => d.EnseignantId == enseignantId && d.SemestreId == semestreId && d.CoursId == coursId)
             .ToListAsync();
@@ -188,8 +272,9 @@ public class DisponibilitesController : ControllerBase
         });
         await _db.Disponibilites.AddRangeAsync(newDispos);
 
-        await LibererCreneauxIndisponiblesAsync(enseignantId, coursId, semestreId, dtos);
+        var notifsCreees = await LibererCreneauxIndisponiblesAsync(enseignantId, coursId, semestreId, dtos);
         await _db.SaveChangesAsync();
+        await _pusher.PushManyAsync(notifsCreees);
 
         return Ok(new { conflits = new List<ConflitDispoDto>() });
     }
@@ -235,7 +320,25 @@ public class DisponibilitesController : ControllerBase
         var conflits = await DetecterConflitsAvantSauvegardeAsync(enseignant.Id, semestreId, coursId, dtos);
         if (conflits.Count > 0)
         {
+            await NotifierAdminsConflitAsync(
+                "Conflit de disponibilité détecté",
+                $"{enseignant.Prenom} {enseignant.Nom} a tenté de déclarer une disponibilité en conflit avec un autre de ses cours (\"{cours.Intitule}\").");
             return Conflict(new { message = "Chevauchement détecté avec un autre de vos cours.", conflits });
+        }
+
+        // Vérifie le chevauchement avec un AUTRE cours du même niveau et du même parcours
+        // (conflit d'emploi du temps pour les étudiants, peu importe l'enseignant).
+        var conflitsNiveau = await DetecterConflitsMemeNiveauFiliereAsync(semestreId, cours, dtos);
+        if (conflitsNiveau.Count > 0)
+        {
+            await NotifierAdminsConflitAsync(
+                "Conflit de disponibilité détecté",
+                $"{enseignant.Prenom} {enseignant.Nom} a tenté de déclarer une disponibilité en conflit avec un autre cours du même niveau/parcours pour \"{cours.Intitule}\".");
+            return Conflict(new
+            {
+                message = "Chevauchement détecté avec un autre cours du même niveau et du même parcours : les étudiants ne peuvent pas suivre les deux cours en même temps.",
+                conflits = conflitsNiveau
+            });
         }
 
         var existing = await _db.Disponibilites
@@ -257,8 +360,9 @@ public class DisponibilitesController : ControllerBase
         });
         await _db.Disponibilites.AddRangeAsync(newDispos);
 
-        await LibererCreneauxIndisponiblesAsync(enseignant.Id, coursId, semestreId, dtos);
+        var notifsCreees = await LibererCreneauxIndisponiblesAsync(enseignant.Id, coursId, semestreId, dtos);
         await _db.SaveChangesAsync();
+        await _pusher.PushManyAsync(notifsCreees);
 
         return Ok(new { conflits = new List<ConflitDispoDto>() });
     }

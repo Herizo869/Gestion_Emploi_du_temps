@@ -3,6 +3,7 @@ using System.Security.Claims;
 
 using Emit.Api.Data;
 using Emit.Api.Entities;
+using Emit.Api.Hubs;
 using Emit.Api.Mappings;
 using Emit.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -40,6 +41,18 @@ builder.Services.AddScoped<ISupabaseAdminService, SupabaseAdminService>();
 // Envoi de l'email de bienvenue avec les identifiants temporaires
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+// --- SignalR (notifications temps réel) ---
+// IMPORTANT : SignalR a sa propre config JSON, indépendante de AddControllers().AddJsonOptions().
+// On l'aligne pour que le payload poussé au Hub ait exactement le même format (camelCase,
+// enum en string) que celui renvoyé par GET /api/notifications.
+builder.Services.AddSignalR()
+    .AddJsonProtocol(o =>
+    {
+        o.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        o.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+builder.Services.AddScoped<INotificationPusher, NotificationPusher>();
+
 // --- JWT (validation Supabase Auth via JWKS) ---
 var supabaseUrl = cfg["Supabase:Url"]!;
 
@@ -69,6 +82,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
         opt.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                // Le client SignalR JS ne peut pas toujours passer le token en header
+                // Authorization lors du handshake WebSocket : on l'accepte aussi en
+                // query string ?access_token=... mais UNIQUEMENT pour les routes /hubs.
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
             OnAuthenticationFailed = context =>
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
@@ -131,7 +157,7 @@ builder.Services.AddAuthorization();
 // --- CORS ---
 var origins = cfg.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(o => o.AddPolicy("Front", p =>
-    p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
+    p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 // --- API + Swagger ---
 builder.Services.AddControllers()
@@ -179,5 +205,6 @@ app.UseCors("Front");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificationsHub>("/hubs/notifications");
 
 app.Run();

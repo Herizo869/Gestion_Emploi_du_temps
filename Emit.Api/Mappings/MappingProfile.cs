@@ -48,5 +48,7 @@ public class MappingProfile : Profile
             .ForMember(d => d.Date, o => o.MapFrom(s => s.DateCreation));
 
         CreateMap<LogEntry, LogEntryDto>();
+        CreateMap<SystemSettings, SystemSettingsDto>()
+            .ForMember(d => d.SmtpPass, o => o.Ignore()); // le mot de passe SMTP ne part jamais vers le front
     }
 }

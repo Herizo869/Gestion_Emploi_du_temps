@@ -4,7 +4,7 @@ import type {
 } from "@/types";
 import { supabase } from "@/lib/supabase";
 
-const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "http://localhost:5000").replace(/\/$/, "");
+export const BASE = (((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "http://localhost:5000").replace(/\/$/, "");
 const TOKEN_KEY = "emit-token";
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
@@ -243,3 +243,31 @@ export const apiDownloadPdf = (params: ExportParams = {}) =>
   downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf");
 export const apiDownloadCsv = (params: ExportParams = {}) =>
   downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv");
+
+// ───── Paramètres système ───────────────────────────────────
+export interface SystemSettingsData {
+  id: string;
+  etablissementNom: string;
+  etablissementSousTitre: string;
+  emailEnabled: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass?: string;
+  fromEmail: string;
+  fromName: string;
+  loginUrl: string;
+  pwdMinLength: number;
+  pwdRequireUppercase: boolean;
+  pwdRequireDigit: boolean;
+  pwdRequireSpecial: boolean;
+}
+
+export const apiGetSettings = () =>
+  request<SystemSettingsData>("/api/settings");
+
+export const apiUpdateSettings = (s: Partial<SystemSettingsData>) =>
+  request<SystemSettingsData>("/api/settings", {
+    method: "PUT",
+    body: JSON.stringify(s),
+  });

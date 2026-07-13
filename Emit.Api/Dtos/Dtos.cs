@@ -133,3 +133,4 @@ public class SlotConflitResponse
     public List<ConflitDto> Conflits { get; set; } = new();
     public List<string> SallesLibres { get; set; } = new();
 }
+
