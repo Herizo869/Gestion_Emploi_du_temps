@@ -103,6 +103,9 @@ export const apiUpdateSalle = (id: string, s: Partial<Salle>) =>
 export const apiDeleteSalle = (id: string) =>
   request<void>(`/api/salles/${id}`, { method: "DELETE" });
 
+export const apiRecalculateOccupation = () =>
+  request<Salle[]>("/api/salles/recalculate-occupation", { method: "POST" });
+
 // ───── Niveaux & Filières ──────────────────────────────────
 export const apiNiveaux = () => request<Niveau[]>("/api/niveaux");
 export const apiCreateNiveau = (data: { libelle: string; effectifMax: number }) =>
@@ -228,6 +231,7 @@ export interface SystemSettingsData {
   pwdRequireDigit: boolean;
   pwdRequireSpecial: boolean;
 }
+
 
 export const apiGetSettings = () =>
   request<SystemSettingsData>("/api/settings");
