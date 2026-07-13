@@ -45,8 +45,9 @@ function countHours(grid: State[][]): number {
 }
 
 export default function AdminDisponibilites() {
-  const { enseignants, semestres, refresh } = useData();
+  const { enseignants, semestres, cours, refresh } = useData();
   const [selectedId, setSelectedId] = useState<string>("");
+  const [coursId, setCoursId] = useState<string>("");
   const [semestreId, setSemestreId] = useState<string>("");
   const [grid, setGrid] = useState<State[][]>(() =>
     Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide"))
@@ -57,12 +58,27 @@ export default function AdminDisponibilites() {
   const [changed, setChanged] = useState(false);
   const [loadingTeacher, setLoadingTeacher] = useState(false);
 
+  // Cours enseignés par l'enseignant sélectionné
+  const coursDeLEnseignant = cours.filter((c) => c.enseignantIds.includes(selectedId));
+
   // Sélection automatique du premier enseignant
   useEffect(() => {
     if (enseignants.length > 0 && !selectedId) {
       setSelectedId(enseignants[0].id);
     }
   }, [enseignants, selectedId]);
+
+  // Sélection automatique du premier cours de cet enseignant (reset si l'enseignant change)
+  useEffect(() => {
+    if (coursDeLEnseignant.length > 0) {
+      if (!coursId || !coursDeLEnseignant.some((c) => c.id === coursId)) {
+        setCoursId(coursDeLEnseignant[0].id);
+      }
+    } else {
+      setCoursId("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, cours]);
 
   // Sélection automatique du semestre
   useEffect(() => {
@@ -74,12 +90,12 @@ export default function AdminDisponibilites() {
 
   // Chargement des disponibilités
   const loadDispos = useCallback(
-    async (enseignantId: string, semId: string) => {
-      if (!enseignantId || !semId) return;
+    async (enseignantId: string, semId: string, cId: string) => {
+      if (!enseignantId || !semId || !cId) return;
       setLoadingTeacher(true);
       setError(null);
       try {
-        const data = await apiDisposEnseignant(enseignantId, semId);
+        const data = await apiDisposEnseignant(enseignantId, semId, cId);
         setGrid(
           data.length > 0
             ? disposToGrid(data)
@@ -98,8 +114,8 @@ export default function AdminDisponibilites() {
   );
 
   useEffect(() => {
-    loadDispos(selectedId, semestreId);
-  }, [selectedId, semestreId, loadDispos]);
+    loadDispos(selectedId, semestreId, coursId);
+  }, [selectedId, semestreId, coursId, loadDispos]);
 
   // Changement cellule grille
   const toggle = (row: number, col: number) => {
@@ -121,6 +137,10 @@ export default function AdminDisponibilites() {
   const handleSave = async () => {
     if (!selectedId) {
       setError("Veuillez sélectionner un enseignant");
+      return;
+    }
+    if (!coursId) {
+      setError("Veuillez sélectionner un cours");
       return;
     }
     if (!semestreId) {
@@ -147,7 +167,7 @@ export default function AdminDisponibilites() {
         }
       }
 
-      await apiSaveDisponibilites(selectedId, semestreId, undefined, disponibilites);
+      await apiSaveDisponibilites(selectedId, semestreId, coursId, disponibilites);
 
       setSaved(true);
       setChanged(false);
@@ -162,6 +182,7 @@ export default function AdminDisponibilites() {
 
   const totalHours = countHours(grid);
   const current = enseignants.find((e) => e.id === selectedId);
+  const coursActuel = cours.find((c) => c.id === coursId);
 
   return (
     <div className="space-y-6">
@@ -170,7 +191,7 @@ export default function AdminDisponibilites() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Disponibilités</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Gérez les disponibilités et indisponibilités des enseignants par créneau
+            Gérez les disponibilités et indisponibilités des enseignants par cours
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -206,6 +227,24 @@ export default function AdminDisponibilites() {
               ))}
             </select>
 
+            <label className="text-sm font-medium text-slate-700">Cours :</label>
+            <select
+              value={coursId}
+              onChange={(e) => setCoursId(e.target.value)}
+              disabled={coursDeLEnseignant.length === 0}
+              className="h-10 min-w-[240px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              {coursDeLEnseignant.length === 0 ? (
+                <option value="">Aucun cours pour cet enseignant</option>
+              ) : (
+                coursDeLEnseignant.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.intitule} — {c.niveauLibelle}
+                  </option>
+                ))
+              )}
+            </select>
+
             <label className="text-sm font-medium text-slate-700">Semestre :</label>
             <select
               value={semestreId}
@@ -236,6 +275,10 @@ export default function AdminDisponibilites() {
                   : "Invité"}
               </Badge>
             )}
+
+            {coursActuel && (
+              <Badge tone="blue">{coursActuel.niveauLibelle}</Badge>
+            )}
           </div>
 
           {/* Légende */}
@@ -260,7 +303,13 @@ export default function AdminDisponibilites() {
       <Card>
         <CardHeader
           title="Grille des disponibilités"
-          subtitle={current ? `${current.prenom} ${current.nom}` : "Sélectionnez un enseignant"}
+          subtitle={
+            current && coursActuel
+              ? `${current.prenom} ${current.nom} — ${coursActuel.intitule}`
+              : current
+              ? `${current.prenom} ${current.nom} — sélectionnez un cours`
+              : "Sélectionnez un enseignant"
+          }
         />
         <CardBody>
           {loadingTeacher ? (
@@ -271,6 +320,11 @@ export default function AdminDisponibilites() {
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <Clock className="h-12 w-12 mb-3" />
               <p className="text-sm">Sélectionnez un enseignant pour voir ses disponibilités</p>
+            </div>
+          ) : !coursId ? (
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+              <Clock className="h-12 w-12 mb-3" />
+              <p className="text-sm">Sélectionnez un cours pour voir ses disponibilités</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Emit.Api.Data;
 using Emit.Api.Dtos.Auth;
 using Emit.Api.Entities;
@@ -77,17 +78,39 @@ public class AuthController : ControllerBase
 
     [HttpGet("me")]
     [Authorize]
-    public async Task<ActionResult<UserDto>> Me()
+    public async Task<ActionResult> Me()
     {
-        var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(idStr, out var id)) return Unauthorized();
+        // Récupère les claims enrichis par OnTokenValidated (depuis public.profiles)
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        var email = User.FindFirst(ClaimTypes.Email)?.Value;
+        var nameId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var name = User.FindFirst(ClaimTypes.Name)?.Value;
+        var enseignantIdStr = User.FindFirst("enseignantId")?.Value;
+
+        if (!string.IsNullOrEmpty(role) && !string.IsNullOrEmpty(email))
+        {
+            Guid? enseignantId = Guid.TryParse(enseignantIdStr, out var eid) ? eid : null;
+            return Ok(new
+            {
+                Id = nameId,
+                Email = email,
+                Prenom = "",
+                Nom = name ?? email,
+                Role = role,
+                EnseignantId = enseignantId,
+            });
+        }
+
+        // Fallback : Users table locale (ancien système d'auth)
+        if (!Guid.TryParse(nameId, out var id)) return Unauthorized();
         var u = await _db.Users.FindAsync(id);
         if (u is null) return NotFound();
-        return new UserDto
+        return Ok(new
         {
-            Id = u.Id, Prenom = u.Prenom, Nom = u.Nom, Email = u.Email,
-            Role = u.Role.ToString(), EnseignantId = u.EnseignantId
-        };
+            u.Id, u.Prenom, u.Nom, u.Email,
+            Role = u.Role.ToString(),
+            EnseignantId = u.EnseignantId
+        });
     }
 
     [HttpPut("me")]

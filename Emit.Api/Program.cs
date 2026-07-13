@@ -1,14 +1,20 @@
 using System.Text;
+using System.Security.Claims;
 
 using Emit.Api.Data;
+using Emit.Api.Entities;
 using Emit.Api.Mappings;
 using Emit.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
 
@@ -28,21 +34,70 @@ builder.Services.AddScoped<ISupabaseAdminService, SupabaseAdminService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
 
-// --- JWT ---
-var jwtKey = Encoding.UTF8.GetBytes(cfg["Jwt:Key"]!);
+// --- JWT (validation Supabase Auth via JWKS) ---
+var supabaseUrl = cfg["Supabase:Url"]!;
+
+// Récupère automatiquement les clés publiques depuis le endpoint JWKS de Supabase
+// (les nouveaux projets Supabase utilisent ES256/RS256 asymétrique, pas HS256)
+var jwksUrl = $"{supabaseUrl}/auth/v1/.well-known/openid-configuration";
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
     {
+        opt.MapInboundClaims = false;
+        opt.ConfigurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
+            jwksUrl,
+            new OpenIdConnectConfigurationRetriever(),
+            new HttpDocumentRetriever { RequireHttps = true });
+
         opt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
+            ValidIssuer = $"{supabaseUrl}/auth/v1",
             ValidateAudience = true,
+            ValidAudience = "authenticated",
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = cfg["Jwt:Issuer"],
-            ValidAudience = cfg["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(jwtKey),
-            ClockSkew = TimeSpan.FromMinutes(1)
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+
+        opt.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("Échec validation JWT : {Message}", context.Exception.Message);
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = async context =>
+            {
+                // Pas de requête sur profiles ici (évite de saturer le pool de connexions).
+                // Le rôle est déterminé directement depuis les claims JWT Supabase.
+                var sub = context.Principal?.FindFirst("sub")?.Value;
+                var emailClaim = context.Principal?.FindFirst("email")?.Value ?? "";
+                var identity = (ClaimsIdentity)context.Principal!.Identity!;
+
+                identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, sub ?? Guid.NewGuid().ToString()));
+                identity.AddClaim(new Claim(ClaimTypes.Email, emailClaim));
+                identity.AddClaim(new Claim(ClaimTypes.Name, emailClaim));
+
+                var isAdmin = emailClaim == "miaroandriamanalintsoa007@gmail.com" || emailClaim == "herizoandrian8@gmail.com";
+                identity.AddClaim(new Claim(ClaimTypes.Role, isAdmin ? "Admin" : "Enseignant"));
+
+                // Une seule requête légère pour lier l'enseignant (utilisé par EDT/me, cours/me, etc.)
+                try
+                {
+                    var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                    var enseignant = await db.Enseignants.AsNoTracking()
+                        .FirstOrDefaultAsync(e => e.Email == emailClaim);
+                    if (enseignant is not null)
+                        identity.AddClaim(new Claim("enseignantId", enseignant.Id.ToString()));
+                }
+                catch
+                {
+                    // Ignorer — le claim enseignantId est optionnel
+                }
+            },
         };
     });
 builder.Services.AddAuthorization();
