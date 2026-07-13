@@ -130,6 +130,14 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityRequirement(new OpenApiSecurityRequirement { { jwtScheme, Array.Empty<string>() } });
 });
 
+// Validation des configurations critiques au démarrage
+var serviceRoleKey = cfg["Supabase:ServiceRoleKey"];
+if (string.IsNullOrWhiteSpace(serviceRoleKey))
+    throw new InvalidOperationException(
+        "Supabase:ServiceRoleKey n'est pas configuré. " +
+        "Définissez la variable d'environnement Supabase__ServiceRoleKey " +
+        "ou configurez-la dans appsettings.Development.json / launchSettings.json");
+
 var app = builder.Build();
 
 // Seed

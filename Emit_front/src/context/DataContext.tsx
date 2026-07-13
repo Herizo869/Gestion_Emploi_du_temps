@@ -39,29 +39,46 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!user) return; // ← LA CORRECTION : ne rien charger si pas connecté
+    if (!user) return;
 
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
+    
     try {
-      const safe = <T,>(p: Promise<T>, fb: T): Promise<T> =>
-        p.catch((err) => {
-          console.error("[DataContext] Erreur de chargement :", err);
-          return fb;
-        });
+      // Fonction utilitaire pour catcher les erreurs individuelles (CORS, 404, 500, etc.)
+      const fetchSafe = async <T,>(promise: Promise<T>, fallback: T, name: string): Promise<T> => {
+        try {
+          return await promise;
+        } catch (err) {
+          console.error(`[DataContext] Erreur sur ${name} :`, err);
+          return fallback;
+        }
+      };
+
       const [ens, sal, cou, niv, sem, ed, no, jo] = await Promise.all([
-        safe(apiEnseignants(), []),
-        safe(apiSalles(), []),
-        safe(apiCours(), []),
-        safe(apiNiveaux(), []),
-        safe(apiSemestres(), []),
-        safe(apiEdt(), []),
-        safe(apiNotifications(), []),
-        user.role === "admin" ? safe(apiJournal(), []) : Promise.resolve([] as LogEntry[]),
+        fetchSafe(apiEnseignants(), [], "Enseignants"),
+        fetchSafe(apiSalles(), [], "Salles"),
+        fetchSafe(apiCours(), [], "Cours"),
+        fetchSafe(apiNiveaux(), [], "Niveaux"),
+        fetchSafe(apiSemestres(), [], "Semestres"),
+        fetchSafe(apiEdt(), [], "EDT"),
+        fetchSafe(apiNotifications(), [], "Notifications"),
+        user.role === "admin" 
+          ? fetchSafe(apiJournal(), [], "Journal") 
+          : Promise.resolve([] as LogEntry[]),
       ]);
-      setEnseignants(ens); setSalles(sal); setCours(cou); setNiveaux(niv);
-      setSemestres(sem); setEdt(ed); setNotifications(no); setJournal(jo);
+
+      setEnseignants(ens);
+      setSalles(sal);
+      setCours(cou);
+      setNiveaux(niv);
+      setSemestres(sem);
+      setEdt(ed);
+      setNotifications(no);
+      setJournal(jo);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur de chargement");
+      console.error("[DataContext] Erreur globale fatale :", e);
+      setError(e instanceof Error ? e.message : "Erreur de chargement des données");
     } finally {
       setLoading(false);
     }
