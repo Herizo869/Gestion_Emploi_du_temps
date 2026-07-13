@@ -126,3 +126,13 @@ export interface GenerationEdtResult {
   coursNonPlanifies: string[];
   conflits: Conflit[];
 }
+
+export interface ExportHistoryEntry {
+  id: string;
+  date: string;
+  format: string;
+  semestre: string;
+  niveau: string;
+  filiere: string;
+  salle: string;
+}

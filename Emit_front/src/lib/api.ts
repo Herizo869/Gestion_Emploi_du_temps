@@ -280,13 +280,51 @@ function buildExportQuery(params: ExportParams) {
   return q.toString();
 }
 
-async function downloadFile(path: string, filename: string) {
+async function downloadFile(path: string, filename: string, onProgress?: (pct: number) => void) {
   const headers = new Headers();
   const token = await getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const res = await fetch(`${BASE}${path}`, { headers });
   if (!res.ok) throw new Error(`Échec du téléchargement (${res.status})`);
-  const blob = await res.blob();
+
+  const contentLength = res.headers.get("Content-Length");
+  const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+  let blob: Blob;
+
+  if (total > 0 && onProgress && res.body) {
+    // Lecture par flux pour suivre la progression réelle
+    const reader = res.body.getReader();
+    const chunks: BlobPart[] = [];
+    let received = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      onProgress(Math.min(Math.round((received / total) * 100), 100));
+    }
+
+    blob = new Blob(chunks);
+  } else if (onProgress) {
+    // Pas de Content-Length → simulation fluide
+    let sim = 0;
+    const interval = setInterval(() => {
+      sim = Math.min(sim + Math.random() * 12, 90);
+      onProgress(Math.round(sim));
+    }, 200);
+    try {
+      blob = await res.blob();
+    } finally {
+      clearInterval(interval);
+    }
+  } else {
+    blob = await res.blob();
+  }
+
+  onProgress?.(100);
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -297,7 +335,7 @@ async function downloadFile(path: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export const apiDownloadPdf = (params: ExportParams = {}) =>
-  downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf");
-export const apiDownloadCsv = (params: ExportParams = {}) =>
-  downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv");
+export const apiDownloadPdf = (params: ExportParams = {}, onProgress?: (pct: number) => void) =>
+  downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf", onProgress);
+export const apiDownloadCsv = (params: ExportParams = {}, onProgress?: (pct: number) => void) =>
+  downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv", onProgress);

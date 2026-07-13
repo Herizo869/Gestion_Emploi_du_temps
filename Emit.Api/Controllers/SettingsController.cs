@@ -64,7 +64,6 @@ public class SettingsController : ControllerBase
         settings.PwdRequireDigit = dto.PwdRequireDigit;
         settings.PwdRequireSpecial = dto.PwdRequireSpecial;
 
-        settings.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
         return Ok(MapToDto(settings));
