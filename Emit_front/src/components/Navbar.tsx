@@ -9,11 +9,8 @@ import {
 import Logo from "./Logo";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
-<<<<<<< HEAD
-import { useTheme } from "@/context/ThemeContext";
-=======
 import { getPreferences, type NotifType } from "@/lib/preferences";
->>>>>>> fbf72b71468139ea838417e5af3b7758f229bedc
+import { useTheme } from "@/context/ThemeContext";
 
 interface Item { to: string; label: string; icon: any; badge?: number }
 interface Group { title: string; icon: any; items: Item[] }
@@ -279,13 +276,8 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
                     })
                   )}
                 </ul>
-<<<<<<< HEAD
-                {notifications.length > 0 && (
-                  <div className="border-t border-slate-100 px-4 py-2 text-center dark:border-slate-700">
-=======
                 {filteredNotifications.length > 0 && (
-                  <div className="border-t border-slate-100 px-4 py-2 text-center">
->>>>>>> fbf72b71468139ea838417e5af3b7758f229bedc
+                  <div className="border-t border-slate-100 px-4 py-2 text-center dark:border-slate-700">
                     <button
                       onClick={() => nav(role === "enseignant" ? "/enseignant/notifications" : "/admin/historique")}
                       className="text-[11px] font-medium text-emit-sky hover:text-emit-navy transition-colors"
@@ -339,13 +331,8 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
                   )}
                   <li>
                     <button
- HEAD
-                      onClick={() => setOpenUser(false)}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-emit-sky/10 hover:text-emit-navy dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
-
                       onClick={() => { setOpenUser(false); nav(settingsLink); }}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-emit-sky/10 hover:text-emit-navy"
- fbf72b71468139ea838417e5af3b7758f229bedc
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-emit-sky/10 hover:text-emit-navy dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
                     >
                       <Settings className="h-4 w-4 text-emit-sky" /> Paramètres
                     </button>
