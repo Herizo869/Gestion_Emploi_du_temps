@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useRef } from "react";
-import { apiNiveaux, apiSemestres, apiEdt, apiDownloadPdf } from "@/lib/api";
+import { apiNiveaux, apiSemestres, apiEdt, apiDownloadPdf, apiDownloadCsv } from "@/lib/api";
 import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileSpreadsheet,
   CalendarDays,
   Search,
   Clock,
@@ -181,14 +182,31 @@ export default function PublicEdt() {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Accès public
               </span>
+              <div className="flex items-center gap-2">
               <button
-                disabled
-                title="Export PDF bientôt disponible"
-                className="flex cursor-not-allowed items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white/50 backdrop-blur-sm"
+                onClick={() => semestre && apiDownloadPdf({
+                  semestreId: semestre.id,
+                  niveauId: currentNiveau?.id,
+                  filiereId: currentNiveau?.filieres.find(f => f.libelle === activeFiliere)?.id,
+                  orientation: "portrait",
+                })}
+                className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
               >
                 <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Télécharger PDF</span>
+                <span className="hidden sm:inline">PDF</span>
               </button>
+              <button
+                onClick={() => semestre && apiDownloadCsv({
+                  semestreId: semestre.id,
+                  niveauId: currentNiveau?.id,
+                  filiereId: currentNiveau?.filieres.find(f => f.libelle === activeFiliere)?.id,
+                })}
+                className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                <span className="hidden sm:inline">CSV</span>
+              </button>
+              </div>
             </div>
           </div>
 
