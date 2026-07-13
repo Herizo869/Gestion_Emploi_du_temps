@@ -1,385 +1,389 @@
-import { useCallback, useEffect, useState } from "react";
-import { Save, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { useState, useEffect, useMemo } from "react";
+import { Save, Loader2, CheckCircle2, XCircle, AlertTriangle, Clock, BookOpen, User } from "lucide-react";
+import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { apiDisposEnseignant, apiSaveDisponibilites, type ConflitDispo } from "@/lib/api";
 import { useData } from "@/context/DataContext";
-import { apiDisposEnseignant, apiSaveDisponibilites, type Dispo } from "@/lib/api";
-import type { Enseignant } from "@/types";
 
 const CRENEAUX = [
-  "07h00 - 08h00",
-  "08h00 - 09h00",
-  "09h00 - 10h00",
-  "10h00 - 11h00",
-  "11h00 - 12h00",
-  "14h00 - 15h00",
-  "15h00 - 16h00",
-  "16h00 - 17h00",
-  "17h00 - 18h00",
+  "07h00 - 08h00", "08h00 - 09h00", "09h00 - 10h00", "10h00 - 11h00", "11h00 - 12h00",
+  "14h00 - 15h00", "15h00 - 16h00", "16h00 - 17h00", "17h00 - 18h00",
 ] as const;
-
 const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"] as const;
-
 const NB_CRENEAUX = CRENEAUX.length;
 const NB_JOURS = JOURS.length;
 
 type State = "dispo" | "indispo" | "vide";
 
-function disposToGrid(dispos: Dispo[]): State[][] {
-  const grid: State[][] = Array.from({ length: NB_CRENEAUX }, () =>
-    Array(NB_JOURS).fill("vide")
-  );
-  dispos.forEach((d) => {
-    const row = CRENEAUX.indexOf(d.creneau as typeof CRENEAUX[number]);
-    const col = JOURS.indexOf(d.jour as typeof JOURS[number]);
-    if (row >= 0 && col >= 0) {
-      grid[row][col] = d.estDisponible ? "dispo" : "indispo";
-    }
-  });
-  return grid;
-}
+// Disponibilité "disponible" d'un AUTRE cours du même enseignant, utilisée
+// pour détecter un chevauchement en direct, sans appel serveur.
+type AutreDispo = { jour: string; creneau: string; coursIntitule: string };
 
-function countHours(grid: State[][]): number {
-  return grid.flat().filter((v) => v === "dispo").length;
-}
+// Chevauchement détecté côté client (avant sauvegarde)
+type OverlapLive = { r: number; c: number; jour: string; creneau: string; coursActuel: string; coursAutre: string };
 
 export default function AdminDisponibilites() {
-  const { enseignants, semestres, cours, refresh } = useData();
-  const [selectedId, setSelectedId] = useState<string>("");
-  const [coursId, setCoursId] = useState<string>("");
+  // Toutes les données sont déjà chargées globalement (admin) — pas d'appel "/me" ici,
+  // c'est l'admin qui choisit EXPLICITEMENT quel enseignant gérer.
+  const { semestres, enseignants, cours, loading: dataLoading } = useData();
+
+  const [enseignantId, setEnseignantId] = useState<string>("");
   const [semestreId, setSemestreId] = useState<string>("");
-  const [grid, setGrid] = useState<State[][]>(() =>
-    Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide"))
+  const [coursId, setCoursId] = useState<string>("");
+
+  const [grid, setGrid] = useState<State[][]>(
+    () => Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State))
   );
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [changed, setChanged] = useState(false);
-  const [loadingTeacher, setLoadingTeacher] = useState(false);
+  const [conflits, setConflits] = useState<ConflitDispo[]>([]);
 
-  // Cours enseignés par l'enseignant sélectionné
-  const coursDeLEnseignant = cours.filter((c) => c.enseignantIds.includes(selectedId));
+  // Disponibilités "disponible" de TOUS les autres cours de cet enseignant sur ce semestre
+  const [autresDispos, setAutresDispos] = useState<AutreDispo[]>([]);
+  const [loadingAutres, setLoadingAutres] = useState(false);
 
-  // Sélection automatique du premier enseignant
+  // Chevauchements détectés en direct (dès le clic sur une case)
+  const [overlapsLive, setOverlapsLive] = useState<OverlapLive[]>([]);
+
+  // ── Sélection par défaut : premier enseignant / semestre publié ──────────
   useEffect(() => {
-    if (enseignants.length > 0 && !selectedId) {
-      setSelectedId(enseignants[0].id);
+    if (enseignants.length > 0 && !enseignantId) setEnseignantId(enseignants[0].id);
+  }, [enseignants, enseignantId]);
+
+  useEffect(() => {
+    if (semestres.length > 0 && !semestreId) {
+      const publie = [...semestres].reverse().find(s => s.statut === "publie");
+      setSemestreId((publie ?? semestres[semestres.length - 1]).id);
     }
-  }, [enseignants, selectedId]);
+  }, [semestres, semestreId]);
 
-  // Sélection automatique du premier cours de cet enseignant (reset si l'enseignant change)
+  // ── Cours de l'enseignant sélectionné (dérivé de la liste globale, pas de "me") ──
+  const mesCours = useMemo(
+    () => cours.filter(c => c.enseignantIds.includes(enseignantId)),
+    [cours, enseignantId]
+  );
+
+  // Quand l'enseignant change, on réinitialise le cours sélectionné sur le premier disponible
   useEffect(() => {
-    if (coursDeLEnseignant.length > 0) {
-      if (!coursId || !coursDeLEnseignant.some((c) => c.id === coursId)) {
-        setCoursId(coursDeLEnseignant[0].id);
+    if (mesCours.length > 0) {
+      if (!coursId || !mesCours.some(c => c.id === coursId)) {
+        setCoursId(mesCours[0].id);
       }
     } else {
       setCoursId("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, cours]);
+  }, [mesCours]);
 
-  // Sélection automatique du semestre
+  // ── Charge la grille de l'enseignant/cours sélectionnés ──────────────────
   useEffect(() => {
-    if (semestres.length > 0 && !semestreId) {
-      const publie = [...semestres].reverse().find((s) => s.statut === "publie");
-      setSemestreId((publie ?? semestres[semestres.length - 1]).id);
+    if (!enseignantId || !semestreId || !coursId) {
+      setGrid(Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State)));
+      return;
     }
-  }, [semestres, semestreId]);
-
-  // Chargement des disponibilités
-  const loadDispos = useCallback(
-    async (enseignantId: string, semId: string, cId: string) => {
-      if (!enseignantId || !semId || !cId) return;
-      setLoadingTeacher(true);
-      setError(null);
-      try {
-        const data = await apiDisposEnseignant(enseignantId, semId, cId);
-        setGrid(
-          data.length > 0
-            ? disposToGrid(data)
-            : Array.from({ length: NB_CRENEAUX }, () =>
-                Array(NB_JOURS).fill("vide")
-              )
-        );
-      } catch (e: any) {
-        setError(e.message ?? "Erreur chargement disponibilités");
-      } finally {
-        setLoadingTeacher(false);
+    setLoading(true);
+    apiDisposEnseignant(enseignantId, semestreId, coursId)
+      .then(dispos => {
+        const newGrid = Array.from({ length: NB_CRENEAUX }, () => Array(NB_JOURS).fill("vide" as State));
+        dispos.forEach(d => {
+          const row = CRENEAUX.indexOf(d.creneau as typeof CRENEAUX[number]);
+          const col = JOURS.indexOf(d.jour as typeof JOURS[number]);
+          if (row >= 0 && col >= 0) {
+            newGrid[row][col] = d.estDisponible ? "dispo" : "indispo";
+          }
+        });
+        setGrid(newGrid);
         setChanged(false);
-      }
-    },
-    []
-  );
+      })
+      .catch((e: any) => setError(e?.message ?? "Erreur lors du chargement des disponibilités"))
+      .finally(() => setLoading(false));
+  }, [enseignantId, semestreId, coursId]);
 
+  // ── Charge les disponibilités "disponible" de TOUS les autres cours de cet enseignant ──
+  // Sert uniquement à détecter les chevauchements en direct côté client.
   useEffect(() => {
-    loadDispos(selectedId, semestreId, coursId);
-  }, [selectedId, semestreId, coursId, loadDispos]);
+    if (!enseignantId || !semestreId || mesCours.length === 0) {
+      setAutresDispos([]);
+      return;
+    }
+    const autresCours = mesCours.filter(c => c.id !== coursId);
+    if (autresCours.length === 0) {
+      setAutresDispos([]);
+      return;
+    }
 
-  // Changement cellule grille
-  const toggle = (row: number, col: number) => {
-    setGrid((prev) => {
-      const copy = prev.map((r) => [...r]);
-      copy[row][col] =
-        copy[row][col] === "vide"
-          ? "dispo"
-          : copy[row][col] === "dispo"
-          ? "indispo"
-          : "vide";
+    let cancelled = false;
+    setLoadingAutres(true);
+
+    Promise.all(
+      autresCours.map(c =>
+        apiDisposEnseignant(enseignantId, semestreId, c.id)
+          .then(dispos =>
+            dispos
+              .filter(d => d.estDisponible)
+              .map(d => ({ jour: d.jour, creneau: d.creneau, coursIntitule: c.intitule }))
+          )
+          .catch(() => [] as AutreDispo[])
+      )
+    ).then(results => {
+      if (cancelled) return;
+      setAutresDispos(results.flat());
+      setLoadingAutres(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [enseignantId, semestreId, coursId, mesCours]);
+
+  // ── Détecte les chevauchements en direct dès que la grille change ────────
+  useEffect(() => {
+    const coursActuel = mesCours.find(c => c.id === coursId);
+    if (!coursActuel || autresDispos.length === 0) {
+      setOverlapsLive([]);
+      return;
+    }
+
+    const found: OverlapLive[] = [];
+    for (let r = 0; r < NB_CRENEAUX; r++) {
+      for (let c = 0; c < NB_JOURS; c++) {
+        if (grid[r][c] !== "dispo") continue;
+        const jour = JOURS[c];
+        const creneau = CRENEAUX[r];
+        const conflitAutre = autresDispos.find(a => a.jour === jour && a.creneau === creneau);
+        if (conflitAutre) {
+          found.push({
+            r, c, jour, creneau,
+            coursActuel: coursActuel.intitule,
+            coursAutre: conflitAutre.coursIntitule,
+          });
+        }
+      }
+    }
+    setOverlapsLive(found);
+  }, [grid, autresDispos, mesCours, coursId]);
+
+  const toggle = (r: number, c: number) => {
+    setGrid(g => {
+      const copy = g.map(row => [...row]);
+      copy[r][c] = copy[r][c] === "vide" ? "dispo" : copy[r][c] === "dispo" ? "indispo" : "vide";
       return copy;
     });
     setChanged(true);
     setSaved(false);
   };
 
-  // Sauvegarde
   const handleSave = async () => {
-    if (!selectedId) {
-      setError("Veuillez sélectionner un enseignant");
-      return;
-    }
-    if (!coursId) {
-      setError("Veuillez sélectionner un cours");
-      return;
-    }
-    if (!semestreId) {
-      setError("Veuillez sélectionner un semestre");
-      return;
+    if (!enseignantId) return setError("Veuillez sélectionner un enseignant");
+    if (!semestreId) return setError("Veuillez sélectionner un semestre");
+    if (!coursId) return setError("Veuillez sélectionner un cours");
+
+    // On bloque la sauvegarde immédiatement si un chevauchement est détecté,
+    // pas besoin d'attendre le refus du serveur.
+    if (overlapsLive.length > 0) {
+      return setError("Veuillez d'abord résoudre le(s) chevauchement(s) signalé(s) en haut de page avant d'enregistrer.");
     }
 
     setSaving(true);
     setError(null);
-
     try {
-      const disponibilites: Dispo[] = [];
-      for (let row = 0; row < NB_CRENEAUX; row++) {
-        for (let col = 0; col < NB_JOURS; col++) {
-          const state = grid[row][col];
+      const disponibilites = [];
+      for (let r = 0; r < NB_CRENEAUX; r++) {
+        for (let c = 0; c < NB_JOURS; c++) {
+          const state = grid[r][c];
           if (state !== "vide") {
-            disponibilites.push({
-              jour: JOURS[col],
-              creneau: CRENEAUX[row],
-              estDisponible: state === "dispo",
-              estIndisponible: state === "indispo",
-            });
+            disponibilites.push({ jour: JOURS[c], creneau: CRENEAUX[r], estDisponible: state === "dispo", estIndisponible: state === "indispo" });
           }
         }
       }
-
-      await apiSaveDisponibilites(selectedId, semestreId, coursId, disponibilites);
-
+      const res = await apiSaveDisponibilites(enseignantId, semestreId, coursId, disponibilites as any);
+      setConflits(res.conflits ?? []);
       setSaved(true);
       setChanged(false);
-      await refresh();
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
       setError(e.message ?? "Erreur lors de la sauvegarde");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const totalHours = countHours(grid);
-  const current = enseignants.find((e) => e.id === selectedId);
-  const coursActuel = cours.find((c) => c.id === coursId);
+  const totalHours = grid.flat().filter(v => v === "dispo").length * 1;
+  const coursActuel = mesCours.find(c => c.id === coursId);
+  const enseignantActuel = enseignants.find(e => e.id === enseignantId);
+
+  // Cases à surligner dans le tableau car concernées par un chevauchement
+  const overlapKey = (r: number, c: number) => `${r}-${c}`;
+  const overlapSet = new Set(overlapsLive.map(o => overlapKey(o.r, o.c)));
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Disponibilités</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Gérez les disponibilités et indisponibilités des enseignants par cours
-          </p>
+    <div className="space-y-5">
+      {/* ── Alerte de chevauchement : TOUT EN HAUT, avant même le titre ── */}
+      {overlapsLive.length > 0 && (
+        <div className="space-y-1.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            Chevauchement détecté — cet enseignant est déjà disponible pour un autre cours sur ce créneau
+          </div>
+          {overlapsLive.map((o, i) => (
+            <p key={i} className="pl-6 text-xs">
+              {o.jour} {o.creneau} : <strong>{o.coursActuel}</strong> et <strong>{o.coursAutre}</strong> se chevauchent.
+            </p>
+          ))}
         </div>
-        <div className="flex items-center gap-3">
-          {changed && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 animate-pulse">
-              <AlertTriangle className="h-3 w-3" /> Modifications non enregistrées
-            </span>
-          )}
+      )}
+
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-2xl font-bold text-slate-900">Disponibilités des enseignants</h1>
+        <div className="flex items-center gap-3 flex-wrap">
+          <select value={enseignantId} onChange={(e) => setEnseignantId(e.target.value)}
+            className="h-10 min-w-[200px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            {enseignants.map(ens => (
+              <option key={ens.id} value={ens.id}>{ens.prenom} {ens.nom}</option>
+            ))}
+          </select>
+          <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)}
+            className="h-10 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            {semestres.map(s => (
+              <option key={s.id} value={s.id}>{s.libelle} — {s.annee}</option>
+            ))}
+          </select>
+          <select value={coursId} onChange={(e) => setCoursId(e.target.value)}
+            className="h-10 min-w-[220px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20">
+            {mesCours.map(c => (
+              <option key={c.id} value={c.id}>{c.intitule} — {c.niveauLibelle}</option>
+            ))}
+          </select>
           <Button
             leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || loading || !enseignantId || !semestreId || !coursId || overlapsLive.length > 0}
+            title={overlapsLive.length > 0 ? "Résolvez les chevauchements signalés en haut avant d'enregistrer" : undefined}
           >
-            {saving ? "Enregistrement..." : "Enregistrer"}
+            {saving ? "Sauvegarde..." : "Sauvegarder"}
           </Button>
         </div>
       </div>
 
-      {/* Filtres */}
+      {enseignantActuel && (
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <User className="h-4 w-4 text-emit-sky" />
+          <span><strong>{enseignantActuel.prenom} {enseignantActuel.nom}</strong></span>
+          {coursActuel && (
+            <>
+              <span className="text-slate-400">·</span>
+              <BookOpen className="h-4 w-4 text-emit-sky" />
+              <span>{coursActuel.intitule}</span>
+              <Badge tone="blue">{coursActuel.niveauLibelle}</Badge>
+            </>
+          )}
+          {loadingAutres && (
+            <span className="text-xs text-slate-400 inline-flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" /> vérification des chevauchements…
+            </span>
+          )}
+        </div>
+      )}
+
+      {saved && (
+        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0" /> ✓ Disponibilités enregistrées avec succès
+        </div>
+      )}
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          <XCircle className="h-4 w-4 shrink-0" /> {error}
+        </div>
+      )}
+      {conflits.length > 0 && (
+        <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="h-4 w-4 shrink-0" /> Conflit entre deux cours de cet enseignant
+          </div>
+          {conflits.map((c, i) => (
+            <p key={i} className="pl-6 text-xs">
+              {c.jour} {c.creneau} : <strong>{c.cours1}</strong> et <strong>{c.cours2}</strong> se chevauchent.
+            </p>
+          ))}
+        </div>
+      )}
+
       <Card>
         <CardBody className="space-y-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="text-sm font-medium text-slate-700">Enseignant :</label>
-            <select
-              value={selectedId}
-              onChange={(e) => setSelectedId(e.target.value)}
-              className="h-10 min-w-[240px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20"
-            >
-              {enseignants.map((e: Enseignant) => (
-                <option key={e.id} value={e.id}>
-                  {e.prenom} {e.nom} — {e.specialite}
-                </option>
-              ))}
-            </select>
-
-            <label className="text-sm font-medium text-slate-700">Cours :</label>
-            <select
-              value={coursId}
-              onChange={(e) => setCoursId(e.target.value)}
-              disabled={coursDeLEnseignant.length === 0}
-              className="h-10 min-w-[240px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 disabled:bg-slate-50 disabled:text-slate-400"
-            >
-              {coursDeLEnseignant.length === 0 ? (
-                <option value="">Aucun cours pour cet enseignant</option>
-              ) : (
-                coursDeLEnseignant.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.intitule} — {c.niveauLibelle}
-                  </option>
-                ))
-              )}
-            </select>
-
-            <label className="text-sm font-medium text-slate-700">Semestre :</label>
-            <select
-              value={semestreId}
-              onChange={(e) => setSemestreId(e.target.value)}
-              className="h-10 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20"
-            >
-              {semestres.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.libelle} — {s.annee}
-                </option>
-              ))}
-            </select>
-
-            {current && (
-              <Badge
-                tone={
-                  current.statut.toLowerCase() === "permanent"
-                    ? "green"
-                    : current.statut.toLowerCase() === "vacataire"
-                    ? "orange"
-                    : "purple"
-                }
-              >
-                {current.statut.toLowerCase() === "permanent"
-                  ? "Permanent"
-                  : current.statut.toLowerCase() === "vacataire"
-                  ? "Vacataire"
-                  : "Invité"}
-              </Badge>
-            )}
-
-            {coursActuel && (
-              <Badge tone="blue">{coursActuel.niveauLibelle}</Badge>
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <span className="font-medium text-slate-700">Légende :</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-green-500 shadow-sm" />Disponible</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-red-500 shadow-sm" />Indisponible</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-slate-200 border border-slate-300" />Non renseigné</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-green-100 border-2 border-amber-500" />Chevauchement</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-slate-500">Cliquez sur une case pour basculer</span>
+            {changed && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 animate-pulse ml-2">
+                <AlertTriangle className="h-3 w-3" /> Non sauvegardé
+              </span>
             )}
           </div>
 
-          {/* Légende */}
-          <div className="flex items-center gap-4 text-xs text-slate-500">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-4 w-4 rounded border border-emit-sky bg-emit-light" /> Disponible
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-4 w-4 rounded border border-red-300 bg-red-50" /> Indisponible
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-4 w-4 rounded border border-slate-200 bg-white" /> Non défini
-            </span>
-            <span className="ml-auto font-medium text-emit-navy">
-              Total : <strong>{totalHours}h</strong> de disponibilité
-            </span>
-          </div>
-        </CardBody>
-      </Card>
-
-      {/* Grille des disponibilités */}
-      <Card>
-        <CardHeader
-          title="Grille des disponibilités"
-          subtitle={
-            current && coursActuel
-              ? `${current.prenom} ${current.nom} — ${coursActuel.intitule}`
-              : current
-              ? `${current.prenom} ${current.nom} — sélectionnez un cours`
-              : "Sélectionnez un enseignant"
-          }
-        />
-        <CardBody>
-          {loadingTeacher ? (
+          {dataLoading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-emit-sky" />
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-emit-sky" />
+                <p className="text-sm text-slate-500">Chargement des données...</p>
+              </div>
             </div>
-          ) : !selectedId ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-              <Clock className="h-12 w-12 mb-3" />
-              <p className="text-sm">Sélectionnez un enseignant pour voir ses disponibilités</p>
+          ) : enseignants.length === 0 ? (
+            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
+              Aucun enseignant en base. Ajoutez-en un depuis la page "Enseignants".
             </div>
-          ) : !coursId ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-              <Clock className="h-12 w-12 mb-3" />
-              <p className="text-sm">Sélectionnez un cours pour voir ses disponibilités</p>
+          ) : mesCours.length === 0 ? (
+            <div className="flex items-center justify-center py-16 text-sm text-slate-500">
+              Aucun cours n'est assigné à {enseignantActuel ? `${enseignantActuel.prenom} ${enseignantActuel.nom}` : "cet enseignant"}.
+            </div>
+          ) : loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-emit-sky" />
+                <p className="text-sm text-slate-500">Chargement des disponibilités...</p>
+              </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px] border-collapse">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+              <table className="w-full min-w-[700px] border-collapse text-sm">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-10 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                      Créneau
+                    <th className="sticky left-0 z-10 bg-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-600 border-r border-slate-200">
+                      <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> Créneaux</div>
                     </th>
-                    {JOURS.map((jour) => (
-                      <th
-                        key={jour}
-                        className="px-3 py-2 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200"
-                      >
+                    {JOURS.map((jour, idx) => (
+                      <th key={jour} className={`px-3 py-3 text-center text-xs font-semibold border-b-2 ${idx === new Date().getDay() - 1 ? "bg-emit-light/60 text-emit-navy border-b-emit-sky" : "bg-slate-50 text-slate-600 border-b-slate-200"}`}>
                         {jour}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {CRENEAUX.map((creneau, row) => (
-                    <tr key={creneau} className="group">
-                      <td className="sticky left-0 z-10 bg-white px-3 py-2 text-xs font-medium text-slate-600 border-b border-slate-100 whitespace-nowrap">
-                        {creneau}
-                      </td>
-                      {JOURS.map((jour, col) => {
-                        const state = grid[row][col];
+                  {CRENEAUX.map((c, r) => (
+                    <tr key={c} className="group">
+                      <td className="sticky left-0 z-10 bg-slate-50/90 px-3 py-2.5 text-xs font-mono text-slate-600 border-r border-slate-200 font-medium">{c}</td>
+                      {JOURS.map((j, ci) => {
+                        const v = grid[r][ci];
+                        const isDispo = v === "dispo";
+                        const isIndispo = v === "indispo";
+                        const isOverlap = overlapSet.has(overlapKey(r, ci));
                         return (
-                          <td
-                            key={`${creneau}-${jour}`}
-                            className="px-1 py-1 border-b border-slate-100"
-                          >
-                            <button
-                              onClick={() => toggle(row, col)}
-                              className={`h-10 w-full rounded-lg border-2 transition-all duration-150 cursor-pointer ${
-                                state === "dispo"
-                                  ? "border-emit-sky bg-emit-light hover:bg-emit-sky/20"
-                                  : state === "indispo"
-                                  ? "border-red-300 bg-red-50 hover:bg-red-100"
-                                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                          <td key={j} className="border border-slate-100 p-1">
+                            <button onClick={() => toggle(r, ci)}
+                              className={`relative h-10 w-full rounded-lg border-2 transition-all duration-150 ${
+                                isOverlap ? "bg-green-100 border-amber-500 ring-2 ring-amber-400 hover:bg-green-200"
+                                : isDispo ? "bg-green-100 border-green-400 hover:bg-green-200 hover:border-green-500"
+                                : isIndispo ? "bg-red-100 border-red-400 hover:bg-red-200 hover:border-red-500"
+                                : "bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
                               }`}
-                              title={
-                                state === "dispo"
-                                  ? "Disponible — Cliquer pour rendre indisponible"
-                                  : state === "indispo"
-                                  ? "Indisponible — Cliquer pour réinitialiser"
-                                  : "Non défini — Cliquer pour rendre disponible"
-                              }
-                            >
-                              {state === "dispo" && (
-                                <CheckCircle2 className="mx-auto h-4 w-4 text-emit-sky" />
-                              )}
-                              {state === "indispo" && (
-                                <XCircle className="mx-auto h-4 w-4 text-red-400" />
-                              )}
+                              title={`${j} ${c}: ${isOverlap ? "Chevauchement avec un autre cours !" : isDispo ? "Disponible" : isIndispo ? "Indisponible" : "Non renseigné"}`}>
+                              {isDispo && !isOverlap && <span className="absolute inset-0 flex items-center justify-center"><CheckCircle2 className="h-4 w-4 text-green-600" /></span>}
+                              {isOverlap && <span className="absolute inset-0 flex items-center justify-center"><AlertTriangle className="h-4 w-4 text-amber-600" /></span>}
+                              {isIndispo && <span className="absolute inset-0 flex items-center justify-center"><XCircle className="h-4 w-4 text-red-600" /></span>}
                             </button>
                           </td>
                         );
@@ -391,19 +395,19 @@ export default function AdminDisponibilites() {
             </div>
           )}
 
-          {error && (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
-          )}
+          <div className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            Une indisponibilité créant un conflit avec un cours planifié sera signalée à l'admin.
+          </div>
 
-          {saved && (
-            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              Disponibilités enregistrées avec succès
-            </div>
-          )}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-600">
+              Total cette semaine : <strong className="text-emit-navy text-lg">{totalHours}h</strong>
+            </p>
+            {changed && (
+              <span className="text-xs text-amber-600 font-medium">Modifications non enregistrées</span>
+            )}
+          </div>
         </CardBody>
       </Card>
     </div>

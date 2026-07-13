@@ -21,7 +21,7 @@ var cfg = builder.Configuration;
 // --- DB ---
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(cfg.GetConnectionString("Default"),
-        npgsqlOptions => npgsqlOptions.CommandTimeout(30)));
+        npgsqlOptions => npgsqlOptions.CommandTimeout(120)));
 
 // Désactiver les logs SQL verbose
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
@@ -30,9 +30,15 @@ builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogL
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEdtGeneratorService, EdtGeneratorService>();
-builder.Services.AddScoped<ISupabaseAdminService, SupabaseAdminService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Nécessaire pour SupabaseAdminService (IHttpClientFactory injecté dans son constructeur)
 builder.Services.AddHttpClient();
+
+// Création de compte Supabase Auth lors de l'ajout d'un enseignant (Admin API)
+builder.Services.AddScoped<ISupabaseAdminService, SupabaseAdminService>();
+
+// Envoi de l'email de bienvenue avec les identifiants temporaires
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // --- JWT (validation Supabase Auth via JWKS) ---
 var supabaseUrl = cfg["Supabase:Url"]!;
@@ -84,17 +90,37 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var isAdmin = emailClaim == "miaroandriamanalintsoa007@gmail.com" || emailClaim == "herizoandrian8@gmail.com";
                 identity.AddClaim(new Claim(ClaimTypes.Role, isAdmin ? "Admin" : "Enseignant"));
 
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+
                 // Une seule requête légère pour lier l'enseignant (utilisé par EDT/me, cours/me, etc.)
+                // Comparaison insensible à la casse (EF.Functions.ILike) pour éviter les faux négatifs
+                // dus à une différence de casse entre l'email Supabase Auth et l'email en base.
                 try
                 {
                     var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+
                     var enseignant = await db.Enseignants.AsNoTracking()
-                        .FirstOrDefaultAsync(e => e.Email == emailClaim);
+                        .FirstOrDefaultAsync(e => EF.Functions.ILike(e.Email, emailClaim));
+
                     if (enseignant is not null)
+                    {
                         identity.AddClaim(new Claim("enseignantId", enseignant.Id.ToString()));
+                        logger.LogInformation(
+                            "Claim enseignantId ajouté pour '{Email}' -> {EnseignantId}",
+                            emailClaim, enseignant.Id);
+                    }
+                    else if (!isAdmin)
+                    {
+                        // Compte enseignant Supabase sans ligne correspondante dans Enseignants :
+                        // toutes les routes "/me" liées à un enseignant renverront 403.
+                        logger.LogWarning(
+                            "Aucun enseignant trouvé en base pour l'email '{Email}' — le claim 'enseignantId' ne sera pas ajouté.",
+                            emailClaim);
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    logger.LogWarning(ex, "Erreur lors de la résolution de l'enseignant pour '{Email}'", emailClaim);
                     // Ignorer — le claim enseignantId est optionnel
                 }
             },
