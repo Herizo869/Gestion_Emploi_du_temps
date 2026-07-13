@@ -71,6 +71,7 @@ export interface AuthResponse {
 }
 export const apiLogin = (email: string, password: string) =>
   request<AuthResponse>("/api/auth/login", {
+
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
