@@ -9,8 +9,8 @@ import {
 import Logo from "./Logo";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
-import { getPreferences, type NotifType } from "@/lib/preferences";
 import { useTheme } from "@/context/ThemeContext";
+import { getPreferences, type NotifType } from "@/lib/preferences";
 
 interface Item { to: string; label: string; icon: any; badge?: number }
 interface Group { title: string; icon: any; items: Item[] }
