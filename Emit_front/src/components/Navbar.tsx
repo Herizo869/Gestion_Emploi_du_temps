@@ -37,6 +37,13 @@ const ADMIN: Group[] = [
       { to: "/admin/historique", label: "Historique", icon: History },
     ],
   },
+  {
+    title: "Mon compte",
+    icon: User,
+    items: [
+      { to: "/admin/profil", label: "Mon profil", icon: User },
+    ],
+  },
 ];
 
 const ENSEIGNANT: Group[] = [
@@ -47,6 +54,7 @@ const ENSEIGNANT: Group[] = [
       { to: "/enseignant/dashboard", label: "Mon planning", icon: Calendar },
       { to: "/enseignant/cours", label: "Mes cours", icon: BookOpen },
       { to: "/enseignant/disponibilites", label: "Disponibilités", icon: ListChecks },
+      { to: "/enseignant/edt", label: "Mon EDT", icon: CalendarDays },
     ],
   },
 ];
@@ -90,7 +98,7 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
 
   const isActiveGroup = (g: Group) => g.items.some((i) => pathname === i.to);
 
-  const profileLink = role === "admin" ? "/admin/dashboard" : "/enseignant/profil";
+  const profileLink = role === "admin" ? "/admin/profil" : "/enseignant/profil";
   const notifLink = role === "enseignant" ? "/enseignant/notifications" : undefined;
 
   return (

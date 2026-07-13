@@ -14,10 +14,11 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ITokenService _token;
+    private readonly ISupabaseAdminService _supabaseAdmin;
 
-    public AuthController(AppDbContext db, ITokenService token)
+    public AuthController(AppDbContext db, ITokenService token, ISupabaseAdminService supabaseAdmin)
     {
-        _db = db; _token = token;
+        _db = db; _token = token; _supabaseAdmin = supabaseAdmin;
     }
 
     [HttpPost("login")]
@@ -130,5 +131,53 @@ public class AuthController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Mot de passe modifié avec succès" });
+    }
+
+    /// <summary>
+    /// ⚠️ ENDPOINT DE DÉPANNAGE — Sans authentification
+    /// Réinitialise le mot de passe d'un utilisateur à la fois dans le backend C# ET Supabase Auth.
+    /// Utile quand les mots de passe sont désynchronisés.
+    ///
+    /// À SUPPRIMER après usage !
+    /// </summary>
+    [HttpPost("reset-password")]
+    public async Task<ActionResult> ResetPassword(ResetPasswordDto dto)
+    {
+        // 1️⃣ Trouver l'utilisateur dans la base C# (avec son éventuel lien Enseignant)
+        var u = await _db.Users.Include(x => x.Enseignant).FirstOrDefaultAsync(x => x.Email == dto.Email);
+        if (u is null)
+            return NotFound(new { message = "Aucun utilisateur trouvé avec cet email" });
+
+        // 2️⃣ Mettre à jour le mot de passe dans le backend C#
+        u.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        await _db.SaveChangesAsync();
+
+        // 3️⃣ Mettre à jour le mot de passe dans Supabase Auth
+        // Le SupabaseAuthUserId est stocké sur l'entité Enseignant (si l'utilisateur est un enseignant)
+        var supabaseAuthId = u.Enseignant?.SupabaseAuthUserId;
+        if (!string.IsNullOrEmpty(supabaseAuthId))
+        {
+            var error = await _supabaseAdmin.UpdateUserPasswordAsync(supabaseAuthId, dto.NewPassword);
+            if (error != null)
+            {
+                return Ok(new
+                {
+                    message = "Mot de passe mis à jour dans le backend C# uniquement. Supabase : " + error,
+                    warning = "Le mot de passe Supabase n'a pas pu être mis à jour. Utilisez le Dashboard Supabase pour le reset."
+                });
+            }
+        }
+        else
+        {
+            // Si pas d'enseignant lié (admin pur), on ne peut pas updater Supabase via l'API Admin
+            // car on n'a pas le SupabaseAuthUserId. L'admin devra le faire manuellement.
+            return Ok(new
+            {
+                message = "Mot de passe mis à jour dans le backend C#. Pour Supabase Auth, réinitialisez-le depuis le Dashboard Supabase (Authentication > Users).",
+                warning = "Supabase Auth non mis à jour (pas de SupabaseAuthUserId)"
+            });
+        }
+
+        return Ok(new { message = "Mot de passe réinitialisé avec succès dans le backend C# et Supabase Auth ! Vous pouvez vous connecter avec le nouveau mot de passe." });
     }
 }

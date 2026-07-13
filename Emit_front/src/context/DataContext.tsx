@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Enseignant, Salle, Cours, Niveau, Semestre, SlotEDT, Notif, LogEntry } from "@/types";
 import {
   apiEnseignants, apiSalles, apiCours, apiNiveaux, apiSemestres,
-  apiEdt, apiNotifications, apiJournal,
+  apiEdt, apiEdtMe, apiNotifications, apiJournal,
 } from "@/lib/api";
 import { useAuth } from "./AuthContext";
 
@@ -54,7 +54,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         safe(apiCours(), []),
         safe(apiNiveaux(), []),
         safe(apiSemestres(), []),
-        safe(apiEdt(), []),
+        // 👇 Admin → tous les EDT, Enseignant → seulement ses créneaux
+        user.role === "admin" ? safe(apiEdt(), []) : safe(apiEdtMe(), []),
         safe(apiNotifications(), []),
         user.role === "admin" ? safe(apiJournal(), []) : Promise.resolve([] as LogEntry[]),
       ]);

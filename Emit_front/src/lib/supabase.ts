@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { StorageClient } from "@supabase/storage-js";
 
 const supabaseUrl = ((import.meta as any).env?.VITE_SUPABASE_URL) as string;
 const supabaseAnonKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY) as string;
@@ -11,8 +12,25 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 /**
  * Client Supabase JS — utiliser pour l'authentification Supabase,
- * le stockage, les souscriptions realtime, etc.
+ * les souscriptions realtime, etc.
  *
  * Pour les données métier, le frontend continue d'appeler Emit.Api (C#).
  */
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+/**
+ * Retourne un StorageClient authentifié avec le token de session de l'utilisateur.
+ * Nécessaire car les policies RLS storage utilisent `TO authenticated`.
+ * Ne pas utiliser la clé anon comme Authorization, ça ne passerait pas RLS.
+ */
+export async function getStorageClient() {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return new StorageClient(
+    `${supabaseUrl.replace(/\/$/, "")}/storage/v1`,
+    {
+      apikey: supabaseAnonKey,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }
+  );
+}

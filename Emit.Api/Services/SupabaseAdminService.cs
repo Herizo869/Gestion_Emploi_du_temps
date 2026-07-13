@@ -20,6 +20,11 @@ public interface ISupabaseAdminService
     /// Crée un utilisateur dans Supabase Auth (auto-confirmed) via l'API Admin
     /// </summary>
     Task<SupabaseCreateUserResult> CreateUserAsync(string email, string password, string fullName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Met à jour le mot de passe d'un utilisateur Supabase Auth via l'API Admin
+    /// </summary>
+    Task<string?> UpdateUserPasswordAsync(string authUserId, string newPassword, CancellationToken ct = default);
 }
 
 public class SupabaseAdminService : ISupabaseAdminService
@@ -99,6 +104,46 @@ public class SupabaseAdminService : ISupabaseAdminService
                 Success = false,
                 Error = ex.InnerException?.Message ?? ex.Message
             };
+        }
+    }
+
+    /// <summary>
+    /// Met à jour le mot de passe d'un utilisateur Supabase Auth via l'API Admin
+    /// PUT /auth/v1/admin/users/{user_id}  body: { "password": "..." }
+    /// </summary>
+    public async Task<string?> UpdateUserPasswordAsync(string authUserId, string newPassword, CancellationToken ct = default)
+    {
+        try
+        {
+            var url = $"{_supabaseUrl.TrimEnd('/')}/auth/v1/admin/users/{authUserId}";
+
+            var payload = new { password = newPassword };
+            var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+            });
+
+            var request = new HttpRequestMessage(HttpMethod.Put, url);
+            request.Headers.Add("apikey", _serviceRoleKey);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _http.SendAsync(request, ct);
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Supabase Admin API error (PUT user password) ({StatusCode}): {Body}", response.StatusCode, responseBody);
+                return $"Erreur API Supabase ({response.StatusCode}): {ExtractErrorMessage(responseBody)}";
+            }
+
+            _logger.LogInformation("Mot de passe Supabase Auth mis à jour pour l'utilisateur {AuthUserId}", authUserId);
+            return null; // Succès
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erreur lors de la mise à jour du mot de passe Supabase Auth pour {AuthUserId}", authUserId);
+            return ex.InnerException?.Message ?? ex.Message;
         }
     }
 
