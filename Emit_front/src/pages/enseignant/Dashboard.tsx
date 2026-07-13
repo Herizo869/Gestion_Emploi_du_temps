@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Download, User, BookOpen, Clock, GraduationCap, Bell, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -8,15 +8,28 @@ import Badge from "@/components/ui/Badge";
 import WeeklyGrid from "@/components/WeeklyGrid";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
+import { apiEdtMe } from "@/lib/api";
+import type { SlotEDT } from "@/types";
 
 const typeTone = { CM: "navy" as const, TD: "sky" as const, TP: "green" as const };
 
 export default function EnsDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { edt, cours, notifications } = useData();
+  const { cours, notifications } = useData();
+  const [mesEdt, setMesEdt] = useState<SlotEDT[]>([]);
+  const [edtLoading, setEdtLoading] = useState(true);
   const myId = user?.enseignantId ?? user?.id ?? "";
   const myCours = cours.filter(c => c.enseignantIds.includes(myId));
+
+  // Charger UNIQUEMENT les créneaux de l'enseignant connecté
+  useEffect(() => {
+    setEdtLoading(true);
+    apiEdtMe()
+      .then(setMesEdt)
+      .catch(() => setMesEdt([]))
+      .finally(() => setEdtLoading(false));
+  }, []);
 
   // Statistiques réelles
   const stats = useMemo(() => {
@@ -91,24 +104,39 @@ export default function EnsDashboard() {
           title="Mon planning"
           subtitle={semaineCourante}
           action={
-            <div className="flex gap-1">
-              <button className="rounded p-1.5 hover:bg-slate-100 transition-colors" title="Semaine précédente">
-                <ChevronLeft className="h-4 w-4 text-slate-500" />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate("/enseignant/edt")}
+                className="flex items-center gap-1.5 rounded-lg border border-emit-sky/30 px-3 py-1.5 text-xs font-semibold text-emit-navy transition-all hover:bg-emit-sky/10 hover:border-emit-sky"
+              >
+                Voir planning complet
               </button>
-              <button className="rounded p-1.5 hover:bg-slate-100 transition-colors" title="Semaine suivante">
-                <ChevronRight className="h-4 w-4 text-slate-500" />
-              </button>
+              <div className="flex gap-1">
+                <button className="rounded p-1.5 hover:bg-slate-100 transition-colors" title="Semaine précédente">
+                  <ChevronLeft className="h-4 w-4 text-slate-500" />
+                </button>
+                <button className="rounded p-1.5 hover:bg-slate-100 transition-colors" title="Semaine suivante">
+                  <ChevronRight className="h-4 w-4 text-slate-500" />
+                </button>
+              </div>
             </div>
           }
         />
         <CardBody>
-          {edt.length === 0 ? (
+          {edtLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-2">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-emit-sky border-t-transparent" />
+                <p className="text-xs text-slate-400">Chargement...</p>
+              </div>
+            </div>
+          ) : mesEdt.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-slate-400">
               <CalendarDays className="h-10 w-10 mb-2" />
               <p className="text-sm">Aucun créneau cette semaine</p>
             </div>
           ) : (
-            <WeeklyGrid slots={edt} highlightToday />
+            <WeeklyGrid slots={mesEdt} highlightToday />
           )}
         </CardBody>
       </Card>

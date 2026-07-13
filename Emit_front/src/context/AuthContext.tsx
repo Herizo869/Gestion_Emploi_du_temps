@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { getToken, apiLogin, setToken } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,43 @@ type AuthContextType = {
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+// ─── Helper : décoder le JWT pour extraire les claims ─────────────────────
+// Permet de récupérer enseignantId, prenom, nom depuis le token JWT
+// (utile après un F5 où l'API n'est pas rappelée)
+
+function decodeJwtClaims(): { enseignantId?: string; role?: string; prenom?: string; nom?: string } {
+  try {
+    const token = getToken();
+    if (!token) return {};
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return {
+      enseignantId: decoded.enseignantId as string | undefined,
+      role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] as string | undefined,
+      prenom: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] as string | undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+// ─── Helper : enrichir AppUser avec les claims du JWT ────────────────────
+// Utilisé dans getSession et onAuthStateChange (après F5)
+
+function enrichFromJwt(appUser: AppUser) {
+  const claims = decodeJwtClaims();
+  if (claims.enseignantId) appUser.enseignantId = claims.enseignantId;
+  const jwtRole = claims.role?.toLowerCase();
+  if (jwtRole === "admin" || jwtRole === "enseignant") {
+    appUser.role = jwtRole;
+  }
+  if (claims.prenom) {
+    const parts = claims.prenom.split(" ");
+    appUser.prenom = parts[0] ?? null;
+    appUser.nom = (parts.slice(1).join(" ") || parts[0]) ?? null;
+  }
+}
 
 // ─── Helper : charger le profil depuis public.profiles ───────────────────────
 //
@@ -119,10 +157,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         try {
           const appUser = await fetchProfile(session.user);
+          enrichFromJwt(appUser);
           if (mounted) setUser(appUser);
         } catch (e) {
-          // On ne bloque pas l'appli au démarrage, mais on log clairement
-          // et on NE connecte PAS l'utilisateur avec un rôle par défaut.
           console.error("[AuthContext] Session restaurée mais profil invalide :", e);
           if (mounted) setUser(null);
         }
@@ -146,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session.user) {
         try {
           const appUser = await fetchProfile(session.user);
+          enrichFromJwt(appUser);
           if (mounted) setUser(appUser);
         } catch (e) {
           console.error("[AuthContext] Changement d'état mais profil invalide :", e);
@@ -189,22 +227,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!data.user) return { ok: false, error: "Utilisateur introuvable." };
 
-    // Le profil doit maintenant se charger correctement, sinon on refuse
-    // la connexion plutôt que de connecter avec un mauvais rôle.
+    // 1️⃣ Récupérer le token API C# — si échec, refuser la connexion
+    let apiRes: Awaited<ReturnType<typeof apiLogin>> | null = null;
     try {
-      const appUser = await fetchProfile(data.user);
-      setUser(appUser);
-      setSession(data.session);
-      return { ok: true, role: appUser.role };
-    } catch (e) {
-      // On déconnecte immédiatement la session Supabase pour éviter un état
-      // "authentifié mais sans rôle fiable".
+      apiRes = await apiLogin(email, password);
+      setToken(apiRes.token);
+    } catch (apiErr) {
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
-      const message = e instanceof Error ? e.message : "Erreur inconnue lors du chargement du profil.";
+      const message = apiErr instanceof Error ? apiErr.message : "Erreur de connexion";
+
+      if (message.includes("compte n'a pas encore été créé") || message.includes("403")) {
+        return {
+          ok: false,
+          error: "Votre compte n'a pas encore été créé ou validé par un administrateur. Veuillez contacter l'administration.",
+        };
+      }
+
       return { ok: false, error: message };
     }
+
+    // 2️⃣ Charger le profil depuis Supabase
+    const appUser = await fetchProfile(data.user);
+
+    // 3️⃣ Enrichir avec les infos du backend C#
+    const apiRole = apiRes.user.role?.toLowerCase();
+    if (apiRole === "admin" || apiRole === "enseignant") {
+      appUser.role = apiRole;
+    }
+    appUser.enseignantId = apiRes.user.enseignantId ?? null;
+    appUser.prenom = apiRes.user.prenom ?? null;
+    appUser.nom = apiRes.user.nom ?? null;
+
+    setUser(appUser);
+    setSession(data.session);
+
+    return { ok: true, role: appUser.role };
   };
 
   // ── Register ──────────────────────────────────────────────────────────────

@@ -5,8 +5,8 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import { useAuth } from "@/context/AuthContext";
-import { supabase, getStorageClient } from "@/lib/supabase";
 import { apiUpdateProfile, apiChangePassword } from "@/lib/api";
+import { supabase, getStorageClient } from "@/lib/supabase";
 
 function strength(p: string): number {
   let s = 0;
@@ -17,13 +17,10 @@ function strength(p: string): number {
   return s;
 }
 
-export default function EnsProfil() {
+export default function AdminProfil() {
   const { user, setUser } = useAuth();
   const [fullName, setFullName] = useState(user?.full_name ?? user?.prenom ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
-  const [specialite, setSpecialite] = useState(user?.specialite ?? "");
-  const [statut, setStatut] = useState(user?.statut ?? "permanent");
-
   const [savedProfile, setSavedProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -56,31 +53,27 @@ export default function EnsProfil() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    // Validate file type
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       setUploadError("Format non supporté. Utilisez JPG, PNG, GIF ou WebP.");
       return;
     }
 
-    // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       setUploadError("Image trop volumineuse. Maximum 2 Mo.");
       return;
     }
 
-    // Show local preview immediately
     const localUrl = URL.createObjectURL(file);
     setAvatarPreview(localUrl);
     setUploadError(null);
     setUploading(true);
 
     try {
-      // Générer un nom de fichier unique
       const fileExt = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
 
-      // Upload vers Supabase Storage (bucket "avatars")
+      // Upload avec token de session (évite RLS "new row violates policy")
       const storage = await getStorageClient();
       const { error: uploadErr } = await storage
         .from("avatars")
@@ -88,25 +81,23 @@ export default function EnsProfil() {
 
       if (uploadErr) throw uploadErr;
 
-      // Récupérer l'URL publique
       const { data: urlData } = storage
         .from("avatars")
         .getPublicUrl(fileName);
 
       const publicUrl = urlData.publicUrl;
 
-      // Mettre à jour public.profiles pour que l'avatar persiste après F5
+      // Mettre à jour public.profiles
       await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl })
         .eq("id", user.id);
 
-      // Mettre à jour le contexte utilisateur
       if (setUser) {
         setUser({ ...user, avatar_url: publicUrl });
       }
 
-      setAvatarPreview(null); // Clear preview so avatarSrc uses user?.avatar_url
+      setAvatarPreview(null);
     } catch (err: any) {
       setUploadError(err.message ?? "Erreur lors de l'upload");
       setAvatarPreview(null);
@@ -123,7 +114,11 @@ export default function EnsProfil() {
     setProfileError(null);
     try {
       const names = fullName.split(" ");
-      const updated = await apiUpdateProfile({ prenom: names[0] ?? fullName, nom: names.slice(1).join(" ") || fullName, email });
+      const updated = await apiUpdateProfile({
+        prenom: names[0] ?? fullName,
+        nom: names.slice(1).join(" ") || fullName,
+        email,
+      });
       if (setUser && user) {
         setUser({ ...user, ...updated, full_name: fullName });
       }
@@ -182,7 +177,6 @@ export default function EnsProfil() {
                     {initials || "?"}
                   </div>
                 )}
-                {/* Overlay au hover */}
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100"
@@ -194,7 +188,6 @@ export default function EnsProfil() {
                   )}
                 </div>
               </div>
-              {/* Bouton caméra en bas à droite */}
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
@@ -219,9 +212,9 @@ export default function EnsProfil() {
             <div className="min-w-0 flex-1">
               <p className="text-lg font-semibold text-slate-900 truncate">{displayName}</p>
               <p className="text-sm text-slate-500">
-                {user?.role === "admin" ? "Administrateur" : "Enseignant"}
+                Administrateur
                 {" · "}
-                <Badge tone="green">{statut === "permanent" ? "Permanent" : statut === "vacataire" ? "Vacataire" : "Invité"}</Badge>
+                <Badge tone="navy">Admin</Badge>
               </p>
               <p className="mt-0.5 text-xs text-slate-400">{user?.email}</p>
             </div>
@@ -259,18 +252,9 @@ export default function EnsProfil() {
           <div className="grid gap-3 sm:grid-cols-2">
             <Input label="Nom complet" value={fullName} onChange={e => setFullName(e.target.value)} placeholder={user?.full_name ?? ""} />
             <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
-            <Input label="Spécialité" value={specialite} onChange={e => setSpecialite(e.target.value)} />
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Statut</label>
-              <select value={statut} onChange={e => setStatut(e.target.value)} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">
-                <option value="permanent">Permanent</option>
-                <option value="vacataire">Vacataire</option>
-                <option value="invite">Invité</option>
-              </select>
-            </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => { setFullName(user?.full_name ?? user?.prenom ?? ""); setEmail(user?.email ?? ""); setSpecialite(user?.specialite ?? ""); setStatut(user?.statut ?? "permanent"); }}>
+            <Button variant="outline" onClick={() => { setFullName(user?.full_name ?? user?.prenom ?? ""); setEmail(user?.email ?? ""); }}>
               Annuler
             </Button>
             <Button onClick={handleSaveProfile} disabled={savingProfile}>

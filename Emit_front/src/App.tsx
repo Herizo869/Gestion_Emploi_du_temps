@@ -16,10 +16,12 @@ import AdminGenerer from "./pages/admin/Generer";
 import AdminEdt from "./pages/admin/Edt";
 import AdminExport from "./pages/admin/Export";
 import AdminHistorique from "./pages/admin/Historique";
+import AdminProfil from "./pages/admin/Profil";
 
 import EnsDashboard from "./pages/enseignant/Dashboard";
 import EnsCours from "./pages/enseignant/Cours";
 import EnsDisponibilites from "./pages/enseignant/Disponibilites";
+import EnsEdt from "./pages/enseignant/Edt";
 import EnsProfil from "./pages/enseignant/Profil";
 import EnsNotifications from "./pages/enseignant/Notifications";
 
@@ -53,6 +55,7 @@ export default function App() {
         <Route path="edt" element={<AdminEdt />} />
         <Route path="export" element={<AdminExport />} />
         <Route path="historique" element={<AdminHistorique />} />
+        <Route path="profil" element={<AdminProfil />} />
       </Route>
 
       <Route
@@ -67,6 +70,7 @@ export default function App() {
         <Route path="dashboard" element={<EnsDashboard />} />
         <Route path="cours" element={<EnsCours />} />
         <Route path="disponibilites" element={<EnsDisponibilites />} />
+        <Route path="edt" element={<EnsEdt />} />
         <Route path="profil" element={<EnsProfil />} />
         <Route path="notifications" element={<EnsNotifications />} />
       </Route>

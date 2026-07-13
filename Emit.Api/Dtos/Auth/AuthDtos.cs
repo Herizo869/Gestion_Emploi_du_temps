@@ -31,6 +31,15 @@ public class ChangePasswordDto
     [Required, MinLength(6)] public string NewPassword { get; set; } = null!;
 }
 
+/// <summary>
+/// DTO pour le reset de mot de passe (dépannage — sans auth)
+/// </summary>
+public class ResetPasswordDto
+{
+    [Required, EmailAddress] public string Email { get; set; } = null!;
+    [Required, MinLength(6)] public string NewPassword { get; set; } = null!;
+}
+
 public class AuthResponseDto
 {
     public string Token { get; set; } = null!;

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Enseignant, Salle, Cours, Niveau, Semestre, SlotEDT, Notif, LogEntry } from "@/types";
 import {
   apiEnseignants, apiSalles, apiCours, apiNiveaux, apiSemestres,
-  apiEdt, apiNotifications, apiJournal,
+  apiEdt, apiEdtMe, apiNotifications, apiJournal,
 } from "@/lib/api";
 import { useAuth } from "./AuthContext";
 
