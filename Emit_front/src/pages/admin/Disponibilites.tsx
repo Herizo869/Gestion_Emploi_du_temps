@@ -217,114 +217,146 @@ export default function AdminDisponibilites() {
   const overlapSet = new Set(overlapsLive.map(o => overlapKey(o.r, o.c)));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 animate-fadeIn">
       {/* ── Alerte de chevauchement : TOUT EN HAUT, avant même le titre ── */}
       {overlapsLive.length > 0 && (
-        <div className="space-y-1.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+        <div className="space-y-1.5 rounded-xl border border-amber-400/60 bg-gradient-to-r from-amber-50 to-orange-50/80 px-4 py-3 text-sm text-amber-800 shadow-[0_0_15px_rgba(251,191,36,0.15)] dark:border-amber-500/40 dark:from-amber-900/25 dark:to-orange-900/15 dark:text-amber-200">
           <div className="flex items-center gap-2 font-semibold">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
             Chevauchement détecté — cet enseignant est déjà disponible pour un autre cours sur ce créneau
           </div>
           {overlapsLive.map((o, i) => (
-            <p key={i} className="pl-6 text-xs">
+            <p key={i} className="pl-6 text-xs text-amber-700 dark:text-amber-300">
               {o.jour} {o.creneau} : <strong>{o.coursActuel}</strong> et <strong>{o.coursAutre}</strong> se chevauchent.
             </p>
           ))}
         </div>
       )}
 
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Disponibilités des enseignants</h1>
-        <div className="flex items-center gap-3 flex-wrap">
-          <select value={enseignantId} onChange={(e) => setEnseignantId(e.target.value)}
-            className="h-10 min-w-[200px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
-            {enseignants.map(ens => (
-              <option key={ens.id} value={ens.id}>{ens.prenom} {ens.nom}</option>
-            ))}
-          </select>
-          <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)}
-            className="h-10 min-w-[180px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
-            {semestres.map(s => (
-              <option key={s.id} value={s.id}>{s.libelle} — {s.annee}</option>
-            ))}
-          </select>
-          <select value={coursId} onChange={(e) => setCoursId(e.target.value)}
-            className="h-10 min-w-[220px] rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
-            {mesCours.map(c => (
-              <option key={c.id} value={c.id}>{c.intitule} — {c.niveauLibelle}</option>
-            ))}
-          </select>
-          <Button
-            leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            onClick={handleSave}
-            disabled={saving || loading || !enseignantId || !semestreId || !coursId || overlapsLive.length > 0}
-            title={overlapsLive.length > 0 ? "Résolvez les chevauchements signalés en haut avant d'enregistrer" : undefined}
-          >
-            {saving ? "Sauvegarde..." : "Sauvegarder"}
-          </Button>
+      {/* ── Panneau de sélection avec glassmorphisme ── */}
+      <div className="rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-md px-4 py-3.5 shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-700/60 dark:bg-slate-800/60">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-emit-navy to-emit-sky bg-clip-text text-transparent dark:from-emit-sky dark:to-blue-300">
+            Disponibilités des enseignants
+          </h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="relative">
+              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <select value={enseignantId} onChange={(e) => setEnseignantId(e.target.value)}
+                className="h-9 min-w-[190px] rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm appearance-none cursor-pointer focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 transition-colors dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100">
+                {enseignants.map(ens => (
+                  <option key={ens.id} value={ens.id}>{ens.prenom} {ens.nom}</option>
+                ))}
+              </select>
+            </div>
+            <div className="relative">
+              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <select value={semestreId} onChange={(e) => setSemestreId(e.target.value)}
+                className="h-9 min-w-[170px] rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm appearance-none cursor-pointer focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 transition-colors dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100">
+                {semestres.map(s => (
+                  <option key={s.id} value={s.id}>{s.libelle} — {s.annee}</option>
+                ))}
+              </select>
+            </div>
+            <div className="relative">
+              <BookOpen className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <select value={coursId} onChange={(e) => setCoursId(e.target.value)}
+                className="h-9 min-w-[210px] rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm appearance-none cursor-pointer focus:border-emit-sky focus:outline-none focus:ring-2 focus:ring-emit-sky/20 transition-colors dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100">
+                {mesCours.map(c => (
+                  <option key={c.id} value={c.id}>{c.intitule} — {c.niveauLibelle}</option>
+                ))}
+              </select>
+            </div>
+            <Button
+              leftIcon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              onClick={handleSave}
+              disabled={saving || loading || !enseignantId || !semestreId || !coursId || overlapsLive.length > 0}
+              title={overlapsLive.length > 0 ? "Résolvez les chevauchements signalés en haut avant d'enregistrer" : undefined}
+              className="shadow-sm hover:shadow-md transition-shadow"
+            >
+              {saving ? "Sauvegarde..." : "Sauvegarder"}
+            </Button>
+          </div>
         </div>
+
+        {enseignantActuel && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700/50 pt-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emit-sky/15 to-blue-50 px-2.5 py-0.5 text-xs font-medium text-emit-navy dark:from-emit-sky/10 dark:to-blue-900/20 dark:text-emit-sky">
+              <User className="h-3 w-3" /> {enseignantActuel.prenom} {enseignantActuel.nom}
+            </span>
+            {coursActuel && (
+              <>
+                <span className="text-slate-300 dark:text-slate-600">·</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emit-light/60 px-2.5 py-0.5 text-xs font-medium text-emit-navy dark:bg-emit-navy-dark/60 dark:text-emit-sky">
+                  <BookOpen className="h-3 w-3" /> {coursActuel.intitule}
+                </span>
+                <Badge tone="navy">{coursActuel.niveauLibelle}</Badge>
+              </>
+            )}
+            {loadingAutres && (
+              <span className="text-xs text-slate-400 dark:text-slate-500 inline-flex items-center gap-1 ml-auto">
+                <Loader2 className="h-3 w-3 animate-spin" /> vérification chevauchements…
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {enseignantActuel && (
-        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-          <User className="h-4 w-4 text-emit-sky" />
-          <span><strong>{enseignantActuel.prenom} {enseignantActuel.nom}</strong></span>
-          {coursActuel && (
-            <>
-              <span className="text-slate-400 dark:text-slate-500">·</span>
-              <BookOpen className="h-4 w-4 text-emit-sky" />
-              <span>{coursActuel.intitule}</span>
-              <Badge tone="blue">{coursActuel.niveauLibelle}</Badge>
-            </>
-          )}
-          {loadingAutres && (
-            <span className="text-xs text-slate-400 dark:text-slate-500 inline-flex items-center gap-1">
-              <Loader2 className="h-3 w-3 animate-spin" /> vérification des chevauchements…
-            </span>
-          )}
-        </div>
-      )}
-
-      {saved && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
-          <CheckCircle2 className="h-4 w-4 shrink-0" /> ✓ Disponibilités enregistrées avec succès
-        </div>
-      )}
-      {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
-          <XCircle className="h-4 w-4 shrink-0" /> {error}
-        </div>
-      )}
-      {conflits.length > 0 && (
-        <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-          <div className="flex items-center gap-2 font-medium">
-            <AlertTriangle className="h-4 w-4 shrink-0" /> Conflit entre deux cours de cet enseignant
+      {/* ── Alertes ── */}
+      <div className="space-y-2">
+        {saved && (
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50/80 px-4 py-2.5 text-sm text-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.1)] dark:border-emerald-800/50 dark:from-emerald-900/20 dark:to-green-900/10 dark:text-emerald-300">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+            <span>✓ Disponibilités enregistrées avec succès</span>
           </div>
-          {conflits.map((c, i) => (
-            <p key={i} className="pl-6 text-xs">
-              {c.jour} {c.creneau} : <strong>{c.cours1}</strong> et <strong>{c.cours2}</strong> se chevauchent.
-            </p>
-          ))}
-        </div>
-      )}
+        )}
+        {error && (
+          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-gradient-to-r from-red-50 to-rose-50/80 px-4 py-2.5 text-sm text-red-700 dark:border-red-800/50 dark:from-red-900/20 dark:to-rose-900/10 dark:text-red-300">
+            <XCircle className="h-4 w-4 shrink-0 text-red-500" />
+            <span>{error}</span>
+          </div>
+        )}
+        {conflits.length > 0 && (
+          <div className="space-y-1.5 rounded-xl border border-amber-300/60 bg-gradient-to-r from-amber-50 to-orange-50/80 px-4 py-3 text-sm text-amber-800 shadow-[0_0_12px_rgba(251,191,36,0.1)] dark:border-amber-500/30 dark:from-amber-900/20 dark:to-orange-900/10 dark:text-amber-200">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" /> Conflit entre deux cours de cet enseignant
+            </div>
+            {conflits.map((c, i) => (
+              <p key={i} className="pl-6 text-xs text-amber-700 dark:text-amber-300">
+                {c.jour} {c.creneau} : <strong>{c.cours1}</strong> et <strong>{c.cours2}</strong> se chevauchent.
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
 
       <Card>
         <CardBody className="space-y-4">
-          <div className="flex flex-wrap items-center gap-4 text-xs">
-            <span className="font-medium text-slate-700 dark:text-slate-300">Légende :</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-green-500 shadow-sm" />Disponible</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-red-500 shadow-sm" />Indisponible</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-slate-200 dark:bg-slate-600 border border-slate-300 dark:border-slate-500" />Non renseigné</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded bg-green-100 border-2 border-amber-500" />Chevauchement</span>
-            <span className="text-slate-400 dark:text-slate-500">·</span>
-            <span className="text-slate-500 dark:text-slate-400">Cliquez sur une case pour basculer</span>
+          {/* ── Légende améliorée ── */}
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <span className="font-semibold text-slate-600 dark:text-slate-300">Légende :</span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gradient-to-b from-green-50 to-emerald-50/50 dark:from-green-900/15 dark:to-emerald-900/10">
+              <span className="h-3 w-3 rounded-sm bg-gradient-to-br from-green-400 to-green-500 shadow-sm" />Disponible
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gradient-to-b from-red-50 to-rose-50/50 dark:from-red-900/15 dark:to-rose-900/10">
+              <span className="h-3 w-3 rounded-sm bg-gradient-to-br from-red-400 to-red-500 shadow-sm" />Indisponible
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gradient-to-b from-slate-50 to-gray-50/50 dark:from-slate-800/50 dark:to-gray-800/30">
+              <span className="h-3 w-3 rounded-sm bg-slate-200 border border-slate-300 dark:bg-slate-600 dark:border-slate-500" />Non renseigné
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gradient-to-b from-amber-50 to-yellow-50/50 dark:from-amber-900/15 dark:to-yellow-900/10">
+              <span className="h-3 w-3 rounded-sm bg-gradient-to-br from-amber-300 to-amber-400 border border-amber-500 shadow-sm" />Chevauchement
+            </span>
+            <span className="text-slate-300 dark:text-slate-600">|</span>
+            <span className="text-slate-400 dark:text-slate-500 italic">Cliquez sur une case pour basculer</span>
             {changed && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 animate-pulse ml-2">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 animate-pulse ml-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400">
                 <AlertTriangle className="h-3 w-3" /> Non sauvegardé
               </span>
             )}
           </div>
 
+          {/* ── Corps du tableau ── */}
           {dataLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="flex flex-col items-center gap-3">
@@ -348,42 +380,72 @@ export default function AdminDisponibilites() {
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-gradient-to-b from-white to-slate-50/50 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-800/80">
               <table className="w-full min-w-[700px] border-collapse text-sm">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-10 bg-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-600 border-r border-slate-200 dark:bg-slate-700/80 dark:text-slate-300 dark:border-slate-600">
+                    <th className="sticky left-0 z-10 bg-gradient-to-b from-emit-navy/90 to-emit-navy/70 px-3 py-3.5 text-left text-xs font-bold text-white/90 border-r border-white/10 tracking-wider uppercase dark:from-emit-navy-dark dark:to-slate-800/90 dark:border-slate-600">
                       <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> Créneaux</div>
                     </th>
-                    {JOURS.map((jour, idx) => (
-                      <th key={jour} className={`px-3 py-3 text-center text-xs font-semibold border-b-2 dark:border-b-slate-600 ${idx === new Date().getDay() - 1 ? "bg-emit-light/60 text-emit-navy border-b-emit-sky dark:bg-emit-navy-dark/60 dark:text-emit-sky" : "bg-slate-50 text-slate-600 border-b-slate-200 dark:bg-slate-800/50 dark:text-slate-300"}`}>
-                        {jour}
-                      </th>
-                    ))}
+                    {JOURS.map((jour, idx) => {
+                      const isToday = idx === new Date().getDay() - 1;
+                      return (
+                        <th key={jour} className={`px-3 py-3.5 text-center text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${
+                          isToday
+                            ? "bg-gradient-to-b from-emit-sky/30 to-emit-light/40 text-emit-navy border-b-emit-sky dark:from-emit-sky/15 dark:to-emit-navy-dark/40 dark:text-emit-sky dark:border-b-emit-sky-dark"
+                            : "bg-gradient-to-b from-slate-100/80 to-slate-50/60 text-slate-700 border-b-slate-200 dark:from-slate-700/60 dark:to-slate-800/40 dark:text-slate-300 dark:border-b-slate-600"
+                        }`}>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span>{jour}</span>
+                            {isToday && <span className="text-[10px] font-normal text-emit-sky-dark dark:text-emit-sky opacity-70">Aujourd'hui</span>}
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
                   {CRENEAUX.map((c, r) => (
-                    <tr key={c} className="group">
-                      <td className="sticky left-0 z-10 bg-slate-50/90 px-3 py-2.5 text-xs font-mono text-slate-600 border-r border-slate-200 font-medium dark:bg-slate-800/90 dark:text-slate-300 dark:border-slate-600">{c}</td>
+                    <tr key={c} className="group transition-colors duration-150 even:bg-slate-50/40 hover:bg-emit-sky/[0.03] dark:even:bg-slate-700/20 dark:hover:bg-emit-sky/[0.05]">
+                      <td className="sticky left-0 z-10 bg-gradient-to-r from-slate-50/95 to-white/90 px-3 py-2.5 text-xs font-mono text-slate-600 border-r border-slate-200 font-semibold group-hover:from-emit-light/40 group-hover:to-white/60 dark:from-slate-800/95 dark:to-slate-800/90 dark:text-slate-300 dark:border-slate-600 dark:group-hover:from-emit-navy-dark/60 dark:group-hover:to-slate-800/80">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-1 w-1 rounded-full bg-emit-sky/40 group-hover:bg-emit-sky transition-colors" />
+                          {c}
+                        </span>
+                      </td>
                       {JOURS.map((j, ci) => {
                         const v = grid[r][ci];
                         const isDispo = v === "dispo";
                         const isIndispo = v === "indispo";
                         const isOverlap = overlapSet.has(overlapKey(r, ci));
                         return (
-                          <td key={j} className="border border-slate-100 p-1 dark:border-slate-700">
+                          <td key={j} className="border border-slate-100 p-1 dark:border-slate-700/60">
                             <button onClick={() => toggle(r, ci)}
-                              className={`relative h-10 w-full rounded-lg border-2 transition-all duration-150 ${
-                                isOverlap ? "bg-green-100 border-amber-500 ring-2 ring-amber-400 hover:bg-green-200"
-                                : isDispo ? "bg-green-100 border-green-400 hover:bg-green-200 hover:border-green-500"
-                                : isIndispo ? "bg-red-100 border-red-400 hover:bg-red-200 hover:border-red-500"
-                                : "bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
+                              className={`relative h-10 w-full rounded-lg border-2 transition-all duration-200 active:scale-95 ${
+                                isOverlap
+                                  ? "bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-500 ring-2 ring-amber-400/50 shadow-[0_0_8px_rgba(251,191,36,0.2)] hover:from-amber-100 hover:to-yellow-100 hover:shadow-[0_0_12px_rgba(251,191,36,0.3)]"
+                                  : isDispo
+                                  ? "bg-gradient-to-br from-green-50 to-emerald-50 border-green-400 shadow-sm hover:from-green-100 hover:to-emerald-100 hover:border-green-500 hover:shadow-md"
+                                  : isIndispo
+                                  ? "bg-gradient-to-br from-red-50 to-rose-50 border-red-400 shadow-sm hover:from-red-100 hover:to-rose-100 hover:border-red-500 hover:shadow-md"
+                                  : "bg-gradient-to-br from-slate-50 to-white border-slate-200 hover:from-slate-100 hover:to-slate-50 hover:border-slate-300 hover:shadow-sm dark:from-slate-700/40 dark:to-slate-800/30 dark:border-slate-600 dark:hover:from-slate-600/50 dark:hover:to-slate-700/40"
                               }`}
                               title={`${j} ${c}: ${isOverlap ? "Chevauchement avec un autre cours !" : isDispo ? "Disponible" : isIndispo ? "Indisponible" : "Non renseigné"}`}>
-                              {isDispo && !isOverlap && <span className="absolute inset-0 flex items-center justify-center"><CheckCircle2 className="h-4 w-4 text-green-600" /></span>}
-                              {isOverlap && <span className="absolute inset-0 flex items-center justify-center"><AlertTriangle className="h-4 w-4 text-amber-600" /></span>}
-                              {isIndispo && <span className="absolute inset-0 flex items-center justify-center"><XCircle className="h-4 w-4 text-red-600" /></span>}
+                              {isDispo && !isOverlap && (
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <CheckCircle2 className="h-5 w-5 text-green-500 drop-shadow-sm transition-transform duration-200 group-hover:scale-110" />
+                                </span>
+                              )}
+                              {isOverlap && (
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <AlertTriangle className="h-5 w-5 text-amber-500 drop-shadow-sm transition-transform duration-200 animate-pulse" />
+                                </span>
+                              )}
+                              {isIndispo && (
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <XCircle className="h-5 w-5 text-red-500 drop-shadow-sm transition-transform duration-200 group-hover:scale-110" />
+                                </span>
+                              )}
                             </button>
                           </td>
                         );
@@ -395,17 +457,24 @@ export default function AdminDisponibilites() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
+          {/* ── Info ── */}
+          <div className="flex items-center gap-2 rounded-xl border border-orange-200/60 bg-gradient-to-r from-orange-50 to-amber-50/60 px-3 py-2.5 text-sm text-orange-700 dark:border-orange-800/40 dark:from-orange-900/15 dark:to-amber-900/10 dark:text-orange-300">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-orange-500" />
             Une indisponibilité créant un conflit avec un cours planifié sera signalée à l'admin.
           </div>
 
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Total cette semaine : <strong className="text-emit-navy text-lg dark:text-emit-sky">{totalHours}h</strong>
-            </p>
+          {/* ── Footer ── */}
+          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-700/50 pt-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500 dark:text-slate-400">Total cette semaine :</span>
+              <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-emit-navy to-emit-sky px-2.5 py-0.5 text-lg font-bold text-white shadow-sm dark:from-emit-navy-dark dark:to-emit-sky-dark">
+                {totalHours}h
+              </span>
+            </div>
             {changed && (
-              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Modifications non enregistrées</span>
+              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/20">
+                <AlertTriangle className="h-3 w-3" /> Modifications non enregistrées
+              </span>
             )}
           </div>
         </CardBody>

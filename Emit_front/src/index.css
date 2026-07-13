@@ -20,6 +20,13 @@
   --color-emit-navy-dark-border: #334155;
   --color-emit-sky-dark-text: #93c5fd;
   --color-emit-light-dark: #1e3a5f;
+
+  /* Animations */
+  --animate-fadeIn: fadeIn 0.3s ease-out;
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-spin-slow: spin-slow 8s linear infinite;
+  --animate-scanline: scanline 8s linear infinite;
 }
 
 /* ══════════════════════════════════════════════════
