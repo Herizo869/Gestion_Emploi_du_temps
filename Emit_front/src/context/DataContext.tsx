@@ -54,7 +54,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         safe(apiCours(), []),
         safe(apiNiveaux(), []),
         safe(apiSemestres(), []),
-        // 👇 Admin → tous les EDT, Enseignant → seulement ses créneaux
+        //  Admin → tous les EDT, Enseignant → seulement ses créneaux
         user.role === "admin" ? safe(apiEdt(), []) : safe(apiEdtMe(), []),
         safe(apiNotifications(), []),
         user.role === "admin" ? safe(apiJournal(), []) : Promise.resolve([] as LogEntry[]),

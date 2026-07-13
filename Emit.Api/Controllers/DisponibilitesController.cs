@@ -1,6 +1,5 @@
 using Emit.Api.Data;
 using Emit.Api.Entities;
-using Emit.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -27,8 +26,7 @@ public class ConflitDispoDto
 public class DisponibilitesController : ControllerBase
 {
     private readonly AppDbContext _db;
-    private readonly INotificationPusher _pusher;
-    public DisponibilitesController(AppDbContext db, INotificationPusher pusher) { _db = db; _pusher = pusher; }
+    public DisponibilitesController(AppDbContext db) { _db = db; }
 
     // Parse "07h00 - 08h00" -> (07:00, 08:00)
     private static bool TryParseCreneau(string creneau, out TimeOnly debut, out TimeOnly fin)
@@ -201,7 +199,6 @@ public class DisponibilitesController : ControllerBase
 
         _db.Notifications.AddRange(notifs);
         await _db.SaveChangesAsync();
-        await _pusher.PushManyAsync(notifs);
     }
 
     // GET /api/disponibilites/{enseignantId}?semestreId=...&coursId=... — Admin
@@ -274,7 +271,6 @@ public class DisponibilitesController : ControllerBase
 
         var notifsCreees = await LibererCreneauxIndisponiblesAsync(enseignantId, coursId, semestreId, dtos);
         await _db.SaveChangesAsync();
-        await _pusher.PushManyAsync(notifsCreees);
 
         return Ok(new { conflits = new List<ConflitDispoDto>() });
     }
@@ -362,7 +358,6 @@ public class DisponibilitesController : ControllerBase
 
         var notifsCreees = await LibererCreneauxIndisponiblesAsync(enseignant.Id, coursId, semestreId, dtos);
         await _db.SaveChangesAsync();
-        await _pusher.PushManyAsync(notifsCreees);
 
         return Ok(new { conflits = new List<ConflitDispoDto>() });
     }

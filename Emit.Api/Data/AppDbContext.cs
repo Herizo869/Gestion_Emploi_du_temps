@@ -23,12 +23,8 @@ public class AppDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<LogEntry> Journal => Set<LogEntry>();
     public DbSet<Disponibilite> Disponibilites => Set<Disponibilite>();
-<<<<<<< Updated upstream
-
-=======
     public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
     
->>>>>>> Stashed changes
     protected override void OnModelCreating(ModelBuilder b)
     {
         // Table gérée par Supabase/trigger — EF ne doit pas essayer de la créer/migrer
