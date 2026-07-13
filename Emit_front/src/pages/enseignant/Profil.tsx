@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -33,6 +33,9 @@ export default function EnsProfil() {
   const [confPwd, setConfPwd] = useState("");
   const [pwdMsg, setPwdMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [savingPwd, setSavingPwd] = useState(false);
+  const [showOldPwd, setShowOldPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfPwd, setShowConfPwd] = useState(false);
 
   // ── Avatar upload ─────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -138,22 +141,67 @@ export default function EnsProfil() {
 
   const handleChangePwd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPwd.length < 6) return setPwdMsg({ ok: false, text: "Mot de passe trop court (min 6 caractères)" });
-    if (newPwd !== confPwd) return setPwdMsg({ ok: false, text: "Les mots de passe ne correspondent pas" });
+
+    // ── Validation renforcée (politique Supabase typique) ──────────────────
     if (!oldPwd) return setPwdMsg({ ok: false, text: "Ancien mot de passe requis" });
+    if (newPwd.length < 8) return setPwdMsg({ ok: false, text: "Mot de passe trop court (min 8 caractères)" });
+    if (!/[A-Z]/.test(newPwd)) return setPwdMsg({ ok: false, text: "Le mot de passe doit contenir au moins une majuscule" });
+    if (!/[0-9]/.test(newPwd)) return setPwdMsg({ ok: false, text: "Le mot de passe doit contenir au moins un chiffre" });
+    if (!/[^A-Za-z0-9]/.test(newPwd)) return setPwdMsg({ ok: false, text: "Le mot de passe doit contenir au moins un caractère spécial" });
+    if (newPwd !== confPwd) return setPwdMsg({ ok: false, text: "Les mots de passe ne correspondent pas" });
+    if (newPwd === oldPwd) return setPwdMsg({ ok: false, text: "Le nouveau mot de passe doit être différent de l'ancien" });
+
     setSavingPwd(true);
     setPwdMsg(null);
     try {
+      // 0️⃣ Vérifier / rafraîchir la session Supabase avant l'opération sensible
+      const auth = supabase.auth;
+      const { data: { session } } = await auth.getSession();
+      if (!session) {
+        throw new Error("Session expirée. Veuillez vous reconnecter.");
+      }
+
+      // Si le token est sur le point d'expirer (< 1 min), on le rafraîchit
+      const expiresAt = session.expires_at;
+      if (expiresAt) {
+        const now = Math.floor(Date.now() / 1000);
+        const margin = 60;
+        if (expiresAt - now < margin) {
+          try {
+            await (auth as any).refreshSession();
+          } catch {
+            console.warn("[Profil] Refresh session a échoué, tentative de mise à jour directe");
+          }
+        }
+      }
+
       // 1️⃣ Mettre à jour le mot de passe Supabase Auth (pour le login)
-      const auth = supabase.auth as any;
-      const { error: supabaseErr } = await auth.updateUser({ password: newPwd });
-      if (supabaseErr) throw new Error(supabaseErr.message);
+      //    Envoie current_password + password pour respecter la politique
+      //    GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD
+      const { error: supabaseErr } = await (auth as any).updateUser({
+        password: newPwd,
+        current_password: oldPwd, // 👈 clé requise par Supabase
+      });
+      if (supabaseErr) {
+        console.error("[Profil] Supabase updateUser error:", supabaseErr);
+        throw new Error(supabaseErr.message);
+      }
 
       // 2️⃣ Mettre à jour le mot de passe Backend C# (pour l'API token)
-      const res = await apiChangePassword(oldPwd, newPwd);
-      setPwdMsg({ ok: true, text: res.message ?? "Mot de passe modifié avec succès" });
+      try {
+        const res = await apiChangePassword(oldPwd, newPwd);
+        setPwdMsg({ ok: true, text: res.message ?? "Mot de passe modifié avec succès" });
+      } catch (backendErr: any) {
+        // Le mot de passe Supabase est déjà changé, on avertit juste
+        console.warn("[Profil] Backend C# password change failed:", backendErr.message);
+        setPwdMsg({
+          ok: true,
+          text: "Mot de passe modifié avec succès. La synchronisation avec le serveur échouera au prochain login (" + (backendErr.message ?? "erreur inconnue") + ")",
+        });
+      }
       setOldPwd(""); setNewPwd(""); setConfPwd("");
     } catch (e: any) {
+      console.error("[Profil] handleChangePwd error:", e);
       setPwdMsg({ ok: false, text: e.message ?? "Erreur lors du changement de mot de passe" });
     } finally {
       setSavingPwd(false);
@@ -285,16 +333,74 @@ export default function EnsProfil() {
         <CardHeader title="Changer mon mot de passe" />
         <CardBody>
           <form onSubmit={handleChangePwd} className="space-y-4">
-            <Input label="Ancien mot de passe" type="password" value={oldPwd} onChange={e => setOldPwd(e.target.value)} />
-            <Input label="Nouveau mot de passe" type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
-            <div className="grid grid-cols-4 gap-1">
-              {[0, 1, 2, 3].map(i => (
-                <span key={i} className={`h-1.5 rounded-full transition-all ${i < s ? colors[s - 1] : "bg-slate-200"}`} />
-              ))}
-            </div>
-            <Input label="Confirmation" type="password" value={confPwd} onChange={e => setConfPwd(e.target.value)} />
+            <Input
+              label="Ancien mot de passe"
+              type={showOldPwd ? "text" : "password"}
+              value={oldPwd}
+              onChange={e => setOldPwd(e.target.value)}
+              rightIcon={
+                <button type="button" onClick={() => setShowOldPwd(!showOldPwd)} className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                  {showOldPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
+            />
+            <Input
+              label="Nouveau mot de passe"
+              type={showNewPwd ? "text" : "password"}
+              value={newPwd}
+              onChange={e => setNewPwd(e.target.value)}
+              rightIcon={
+                <button type="button" onClick={() => setShowNewPwd(!showNewPwd)} className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                  {showNewPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
+            />
+            {/* Barre de force */}
+            {newPwd.length > 0 && (
+              <>
+                <div className="grid grid-cols-4 gap-1">
+                  {[0, 1, 2, 3].map(i => (
+                    <span key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i < s ? colors[s - 1] : "bg-slate-200 dark:bg-slate-600"}`} />
+                  ))}
+                </div>
+                {/* Checklist conditions */}
+                <div className="space-y-1 text-xs">
+                  {[
+                    { check: newPwd.length >= 8, label: "Au moins 8 caractères" },
+                    { check: /[A-Z]/.test(newPwd), label: "Une lettre majuscule" },
+                    { check: /[0-9]/.test(newPwd), label: "Un chiffre" },
+                    { check: /[^A-Za-z0-9]/.test(newPwd), label: "Un caractère spécial" },
+                  ].map(({ check, label }) => (
+                    <p key={label} className={`flex items-center gap-1.5 transition-colors duration-200 ${check ? "text-green-600 dark:text-green-400" : "text-slate-400 dark:text-slate-500"}`}>
+                      <span className={`text-xs ${check ? "text-green-500" : "text-slate-300"}`}>{check ? "✓" : "○"}</span>
+                      {label}
+                    </p>
+                  ))}
+                </div>
+              </>
+            )}
+            <Input
+              label="Confirmation"
+              type={showConfPwd ? "text" : "password"}
+              value={confPwd}
+              onChange={e => setConfPwd(e.target.value)}
+              rightIcon={
+                <button type="button" onClick={() => setShowConfPwd(!showConfPwd)} className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                  {showConfPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
+            />
+            {/* Indicateur de correspondance */}
+            {confPwd.length > 0 && (
+              <p className={`flex items-center gap-1 text-xs transition-all duration-200 ${
+                newPwd === confPwd ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
+              }`}>
+                <span>{newPwd === confPwd ? "✓" : "✗"}</span>
+                {newPwd === confPwd ? "Les mots de passe correspondent" : "Les mots de passe ne correspondent pas"}
+              </p>
+            )}
             {pwdMsg && (
-              <div className={`rounded-lg px-3 py-2 text-sm ${pwdMsg.ok ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+              <div className={`rounded-lg px-3 py-2 text-sm transition-all duration-300 ${pwdMsg.ok ? "bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800" : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800"}`}>
                 {pwdMsg.text}
               </div>
             )}

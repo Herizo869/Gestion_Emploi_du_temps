@@ -69,12 +69,35 @@ export interface AuthResponse {
   token: string;
   user: AuthResponseUser;
 }
-export const apiLogin = (email: string, password: string) =>
-  request<AuthResponse>("/api/auth/login", {
+export const apiLogin = async (email: string, password: string): Promise<AuthResponse> => {
+  // 🔥 Appel direct sans passer par `request()` car le 401 du login
+  //    signifie "mot de passe incorrect côté C#", PAS "session expirée".
+  //    Le `request()` déconnecterait Supabase pour un 401, ce qui est
+  //    catastrophique quand Supabase et C# sont désynchronisés.
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  const token = await getAccessToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
+  const res = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
+    headers,
     body: JSON.stringify({ email, password }),
   });
+
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const j = await res.json();
+      msg = j.message ?? j.error ?? msg;
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+
+  return (await res.json()) as AuthResponse;
+};
 
 export const apiMe = () => request<MeResponse>("/api/auth/me");
 export const apiUpdateProfile = (data: { prenom: string; nom: string; email: string }) =>

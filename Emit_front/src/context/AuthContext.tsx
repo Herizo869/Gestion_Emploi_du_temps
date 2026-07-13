@@ -227,25 +227,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!data.user) return { ok: false, error: "Utilisateur introuvable." };
 
-    // 1️⃣ Récupérer le token API C# — si échec, refuser la connexion
+    // 1️⃣ Récupérer le token API C# — si échec, ne PAS signOut Supabase
+    //    (sinon un simple décalage de mot de passe entre Supabase et C#
+    //     verrouille l'utilisateur dans une boucle infernale)
     let apiRes: Awaited<ReturnType<typeof apiLogin>> | null = null;
     try {
       apiRes = await apiLogin(email, password);
       setToken(apiRes.token);
     } catch (apiErr) {
-      await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
       const message = apiErr instanceof Error ? apiErr.message : "Erreur de connexion";
 
+      // ⛔ Compte non créé côté C# → on signOut Supabase aussi
       if (message.includes("compte n'a pas encore été créé") || message.includes("403")) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setSession(null);
         return {
           ok: false,
           error: "Votre compte n'a pas encore été créé ou validé par un administrateur. Veuillez contacter l'administration.",
         };
       }
 
-      return { ok: false, error: message };
+      // ⚠️ Mot de passe désynchronisé (C# vs Supabase) ou backend indisponible
+      //    → on laisse l'utilisateur se connecter via Supabase seulement
+      console.warn("[Auth] Login C# échoué, connexion via Supabase uniquement :", message);
+
+      const appUser = await fetchProfile(data.user);
+      setUser(appUser);
+      setSession(data.session);
+      return { ok: true, role: appUser.role };
     }
 
     // 2️⃣ Charger le profil depuis Supabase
