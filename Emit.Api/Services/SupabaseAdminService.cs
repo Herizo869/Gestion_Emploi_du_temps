@@ -25,6 +25,14 @@ public interface ISupabaseAdminService
     /// Met à jour le mot de passe d'un utilisateur Supabase Auth via l'API Admin
     /// </summary>
     Task<string?> UpdateUserPasswordAsync(string authUserId, string newPassword, CancellationToken ct = default);
+
+    /// <summary>
+    /// Supprime un utilisateur dans Supabase Auth via l'API Admin.
+    /// Entraîne la suppression en cascade de sa ligne dans public.profiles
+    /// (si la FK profiles.id → auth.users.id est en ON DELETE CASCADE).
+    /// Retourne null si succès, sinon un message d'erreur.
+    /// </summary>
+    Task<string?> DeleteUserAsync(string authUserId, CancellationToken ct = default);
 }
 
 public class SupabaseAdminService : ISupabaseAdminService
@@ -143,6 +151,46 @@ public class SupabaseAdminService : ISupabaseAdminService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erreur lors de la mise à jour du mot de passe Supabase Auth pour {AuthUserId}", authUserId);
+            return ex.InnerException?.Message ?? ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Supprime un utilisateur Supabase Auth via l'API Admin
+    /// DELETE /auth/v1/admin/users/{user_id}
+    /// </summary>
+    public async Task<string?> DeleteUserAsync(string authUserId, CancellationToken ct = default)
+    {
+        try
+        {
+            var url = $"{_supabaseUrl.TrimEnd('/')}/auth/v1/admin/users/{authUserId}";
+
+            var request = new HttpRequestMessage(HttpMethod.Delete, url);
+            request.Headers.Add("apikey", _serviceRoleKey);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
+
+            var response = await _http.SendAsync(request, ct);
+
+            // 404 = déjà supprimé côté Supabase, on considère ça comme un succès (idempotent)
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation("Utilisateur Supabase Auth {AuthUserId} déjà absent (404), suppression ignorée", authUserId);
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogError("Supabase Admin API error (DELETE user) ({StatusCode}): {Body}", response.StatusCode, responseBody);
+                return $"Erreur API Supabase ({response.StatusCode}): {ExtractErrorMessage(responseBody)}";
+            }
+
+            _logger.LogInformation("Compte Supabase Auth {AuthUserId} supprimé", authUserId);
+            return null; // Succès
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erreur lors de la suppression du compte Supabase Auth {AuthUserId}", authUserId);
             return ex.InnerException?.Message ?? ex.Message;
         }
     }
