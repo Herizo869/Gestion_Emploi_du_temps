@@ -1,4 +1,6 @@
-﻿using Emit.Api.Data;
+import os
+
+content = r'''using Emit.Api.Data;
 using Emit.Api.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -98,10 +100,10 @@ public class ExportController : ControllerBase
             sb.AppendLine(string.Join(";", new string[]
             {
                 JourFr(s.Jour),
-                $"{s.HeureDebut:HH:mm} - {s.HeureFin:HH:mm}",
+                string.Format("{0:HH\:mm} - {1:HH\:mm}", s.HeureDebut, s.HeureFin),
                 s.Cours.Intitule,
                 s.Cours.Type.ToString(),
-                $"{s.Enseignant.Prenom} {s.Enseignant.Nom}",
+                string.Format("{0} {1}", s.Enseignant.Prenom, s.Enseignant.Nom),
                 s.Enseignant.Specialite,
                 StatutEnsFr(s.Enseignant.Statut),
                 s.Salle.Numero,
@@ -164,21 +166,18 @@ public class ExportController : ControllerBase
                         {
                             r.RelativeItem().AlignLeft().Text(t =>
                             {
-                                t.DefaultTextStyle(x => x.FontSize(8).FontColor(Navy));
                                 t.Span("Creneaux : ").SemiBold();
-                                t.Span($"{totalCreneaux} seance{(totalCreneaux > 1 ? "s" : "")}");
-                            });
+                                t.Span(string.Format("{0} seance{1}", totalCreneaux, totalCreneaux > 1 ? "s" : ""));
+                            }).FontSize(8).FontColor(Navy);
                             r.RelativeItem().AlignCenter().Text(t =>
                             {
-                                t.DefaultTextStyle(x => x.FontSize(8).FontColor(Navy));
                                 t.Span("Genere le ");
                                 t.Span(DateTime.Now.ToString("dd/MM/yyyy a HH:mm"));
-                            });
+                            }).FontSize(8).FontColor(Navy);
                             r.RelativeItem().AlignRight().Text(t =>
                             {
-                                t.DefaultTextStyle(x => x.FontSize(8).FontColor(Navy));
-                                t.Span($"Orientation : {(isLandscape ? "Paysage" : "Portrait")}");
-                            });
+                                t.Span(string.Format("Orientation : {0}", isLandscape ? "Paysage" : "Portrait"));
+                            }).FontSize(8).FontColor(Navy);
                         });
                 });
 
@@ -188,97 +187,4 @@ public class ExportController : ControllerBase
                         table.ColumnsDefinition(c =>
                         {
                             c.RelativeColumn(0.9f);
-                            c.RelativeColumn(1.2f);
-                            c.RelativeColumn(3.0f);
-                            c.RelativeColumn(0.8f);
-                            c.RelativeColumn(2.0f);
-                            c.RelativeColumn(0.8f);
-                        });
-                    else
-                        table.ColumnsDefinition(c =>
-                        {
-                            c.RelativeColumn(0.9f);
-                            c.RelativeColumn(1.1f);
-                            c.RelativeColumn(2.5f);
-                            c.RelativeColumn(0.7f);
-                            c.RelativeColumn(1.6f);
-                            c.RelativeColumn(0.7f);
-                        });
-
-                    void HeaderCell(string text)
-                    {
-                        table.Cell().Background(Navy).Padding(5).Text(text)
-                            .FontSize(8).Bold().FontColor(Colors.White).AlignCenter();
-                    }
-                    HeaderCell("Jour");
-                    HeaderCell("Horaire");
-                    HeaderCell("Cours");
-                    HeaderCell("Type");
-                    HeaderCell("Enseignant");
-                    HeaderCell("Salle");
-
-                    var ligneIdx = 0;
-                    Jour? dernierJour = null;
-
-                    foreach (var s in slots)
-                    {
-                        var bg = ligneIdx % 2 == 0
-                            ? Colors.White
-                            : Color.FromHex("#F8FAFC");
-
-                        if (dernierJour.HasValue && dernierJour != s.Jour)
-                        {
-                            for (int i = 0; i < 6; i++)
-                                table.Cell().Background(bg).Padding(2).Text("");
-                            ligneIdx++;
-                            bg = ligneIdx % 2 == 0 ? Colors.White : Color.FromHex("#F8FAFC");
-                        }
-                        dernierJour = s.Jour;
-
-                        table.Cell().Background(bg).Padding(3).Text(JourFr(s.Jour))
-                            .FontSize(8).FontColor(Navy).SemiBold();
-                        table.Cell().Background(bg).Padding(3).Text(string.Format("{0:HH:mm} - {1:HH:mm}", s.HeureDebut, s.HeureFin))
-                            .FontSize(8).FontColor(Colors.Grey.Darken2).AlignCenter();
-                        table.Cell().Background(bg).Padding(3).Text(s.Cours.Intitule)
-                            .FontSize(8).FontColor(Colors.Black);
-                        table.Cell().Background(bg).Padding(3).Text(s.Cours.Type.ToString())
-                            .FontSize(7).Bold().FontColor(TypeFg(s.Cours.Type)).AlignCenter();
-                        table.Cell().Background(bg).Padding(3).Text($"{s.Enseignant.Prenom} {s.Enseignant.Nom}")
-                            .FontSize(8).FontColor(Colors.Grey.Darken3);
-                        table.Cell().Background(bg).Padding(3).Text(s.Salle.Numero)
-                            .FontSize(8).FontColor(Colors.Grey.Darken2).AlignCenter();
-
-                        ligneIdx++;
-                    }
-                });
-
-                page.Footer().Column(f =>
-                {
-                    f.Item().Height(2).Background(Navy).ExtendHorizontal();
-                    f.Item().Height(3);
-                    f.Item().Row(r =>
-                    {
-                        r.RelativeItem().AlignLeft().Text(t =>
-                        {
-                            t.Span($"{ecoleNom} - ").FontSize(7).FontColor(Colors.Grey.Darken1);
-                            t.Span("EDT - ").FontSize(7).FontColor(Colors.Grey.Darken1);
-                            t.Span(sousTitre).FontSize(7).FontColor(Colors.Grey.Darken1);
-                            if (!string.IsNullOrWhiteSpace(descriptionFiliere))
-                                t.Span($" - {descriptionFiliere}").FontSize(7).FontColor(Colors.Grey.Darken1);
-                        });
-                        r.RelativeItem().AlignRight().Text(t =>
-                        {
-                            t.Span("Page ").FontSize(7).FontColor(Colors.Grey.Darken1);
-                            t.CurrentPageNumber().FontSize(7).FontColor(Colors.Grey.Darken1);
-                            t.Span(" / ").FontSize(7).FontColor(Colors.Grey.Darken1);
-                            t.TotalPages().FontSize(7).FontColor(Colors.Grey.Darken1);
-                        });
-                    });
-                });
-            });
-        });
-
-        var bytes = doc.GeneratePdf();
-        return File(bytes, "application/pdf", "edt.pdf");
-    }
-}
+                    
