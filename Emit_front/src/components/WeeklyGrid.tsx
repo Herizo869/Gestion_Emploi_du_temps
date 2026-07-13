@@ -74,23 +74,23 @@ export default function WeeklyGrid({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
       <table className="w-full min-w-[720px] border-collapse text-sm">
         <thead>
           <tr>
-            <th className="w-32 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-500">
+            <th className="w-32 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
               Créneau
             </th>
             {JOURS.map((j, i) => (
               <th
                 key={j}
-                className={`border-b border-l border-slate-200 px-3 py-2 text-left text-xs font-semibold ${
-                  i === todayIdx ? "bg-emit-light text-emit-navy" : "bg-slate-50 text-slate-700"
+                className={`border-b border-l border-slate-200 px-3 py-2 text-left text-xs font-semibold dark:border-slate-700 ${
+                  i === todayIdx ? "bg-emit-light text-emit-navy dark:bg-emit-navy-dark dark:text-emit-sky" : "bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 }`}
               >
                 {j}
                 {i === todayIdx && (
-                  <span className="ml-1 rounded-full bg-emit-navy px-1.5 py-0.5 text-[10px] text-white">
+                  <span className="ml-1 rounded-full bg-emit-navy px-1.5 py-0.5 text-[10px] text-white dark:bg-emit-sky dark:text-slate-900">
                     Aujourd'hui
                   </span>
                 )}
@@ -101,7 +101,7 @@ export default function WeeklyGrid({
         <tbody>
           {CRENEAUX.map((c, rowIdx) => (
             <tr key={c}>
-              <td className="border-b border-slate-100 bg-slate-50/60 px-3 py-2 text-xs font-mono text-slate-600">
+              <td className="border-b border-slate-100 bg-slate-50/60 px-3 py-2 text-xs font-mono text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
                 {c}
               </td>
               {JOURS.map((j, i) => {
@@ -111,8 +111,8 @@ export default function WeeklyGrid({
                   <td
                     key={j}
                     rowSpan={block?.span ?? 1}
-                    className={`border-b border-l border-slate-100 align-top ${
-                      i === todayIdx ? "bg-emit-light/30" : ""
+                    className={`border-b border-l border-slate-100 align-top dark:border-slate-700 ${
+                      i === todayIdx ? "bg-emit-light/30 dark:bg-emit-navy-dark/30" : ""
                     }`}
                   >
                     {block ? (
@@ -133,7 +133,7 @@ export default function WeeklyGrid({
                         )}
                       </button>
                     ) : (
-                      <div className="px-3 py-3 text-center text-xs text-slate-300">—</div>
+                      <div className="px-3 py-3 text-center text-xs text-slate-300 dark:text-slate-600">—</div>
                     )}
                   </td>
                 );

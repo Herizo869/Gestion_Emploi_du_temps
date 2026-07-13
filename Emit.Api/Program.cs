@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Security.Claims;
 
@@ -40,22 +41,124 @@ builder.Services.AddScoped<ISupabaseAdminService, SupabaseAdminService>();
 // Envoi de l'email de bienvenue avec les identifiants temporaires
 builder.Services.AddScoped<IEmailService, EmailService>();
 
-// --- JWT (validation Supabase Auth via JWKS) ---
+// --- JWT (double validation : backend local + Supabase Auth) ---
 var supabaseUrl = cfg["Supabase:Url"]!;
-
-// Récupère automatiquement les clés publiques depuis le endpoint JWKS de Supabase
-// (les nouveaux projets Supabase utilisent ES256/RS256 asymétrique, pas HS256)
 var jwksUrl = $"{supabaseUrl}/auth/v1/.well-known/openid-configuration";
+var localKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(cfg["Jwt:Key"]!));
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(opt =>
+var jwtEvents = new JwtBearerEvents
+{
+    OnAuthenticationFailed = context =>
+    {
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning("Échec validation JWT : {Message}", context.Exception.Message);
+        return Task.CompletedTask;
+    },
+    OnTokenValidated = async context =>
+    {
+        var sub = context.Principal?.FindFirst("sub")?.Value;
+        var emailClaim = context.Principal?.FindFirst(ClaimTypes.Email)?.Value
+                      ?? context.Principal?.FindFirst("email")?.Value
+                      ?? "";
+        var identity = (ClaimsIdentity)context.Principal!.Identity!;
+
+        identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, sub ?? Guid.NewGuid().ToString()));
+        identity.AddClaim(new Claim(ClaimTypes.Email, emailClaim));
+        identity.AddClaim(new Claim(ClaimTypes.Name, emailClaim));
+
+        var isAdmin = emailClaim == "miaroandriamanalintsoa007@gmail.com"
+                   || emailClaim == "herizoandrian8@gmail.com"
+                   || emailClaim == "admin@emit.mg";
+        identity.AddClaim(new Claim(ClaimTypes.Role, isAdmin ? "Admin" : "Enseignant"));
+
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+
+        try
+        {
+            var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+            var enseignant = await db.Enseignants.AsNoTracking()
+                .FirstOrDefaultAsync(e => EF.Functions.ILike(e.Email, emailClaim));
+
+            if (enseignant is not null)
+            {
+                identity.AddClaim(new Claim("enseignantId", enseignant.Id.ToString()));
+                logger.LogInformation(
+                    "Claim enseignantId ajouté pour '{Email}' -> {EnseignantId}",
+                    emailClaim, enseignant.Id);
+            }
+            else if (!isAdmin)
+            {
+                logger.LogWarning(
+                    "Aucun enseignant trouvé en base pour l'email '{Email}' — le claim 'enseignantId' ne sera pas ajouté.",
+                    emailClaim);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Erreur lors de la résolution de l'enseignant pour '{Email}'", emailClaim);
+        }
+    },
+};
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = "LocalOrSupabase";
+    options.DefaultChallengeScheme = "LocalOrSupabase";
+})
+    // Schéma composite : essaie d'abord le token local, puis Supabase
+    .AddPolicyScheme("LocalOrSupabase", "Local or Supabase", options =>
+    {
+        options.ForwardDefaultSelector = ctx =>
+        {
+            var auth = ctx.Request.Headers["Authorization"].FirstOrDefault();
+            if (string.IsNullOrEmpty(auth) || !auth.StartsWith("Bearer "))
+                return "Supabase"; // anonymous → Supabase (AllowAnonymous gère le reste)
+
+            try
+            {
+                var token = auth["Bearer ".Length..].Trim();
+                // Les tokens Supabase commencent par "eyJ" (base64url) et contiennent un payload
+                // qui a "iss": "https://{project}.supabase.co/auth/v1"
+                // Les tokens locaux ont "iss": "EmitApi"
+                var handler = new JwtSecurityTokenHandler();
+                if (handler.CanReadToken(token))
+                {
+                    var jwt = handler.ReadJwtToken(token);
+                    var iss = jwt.Issuer;
+                    if (iss == cfg["Jwt:Issuer"])
+                        return "Local";
+                }
+            }
+            catch { }
+
+            return "Supabase";
+        };
+    })
+    // 1) Token local (HS256, signé par TokenService.cs)
+    .AddJwtBearer("Local", opt =>
+    {
+        opt.MapInboundClaims = false;
+        opt.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = cfg["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = cfg["Jwt:Audience"],
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = localKey,
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+        opt.Events = jwtEvents;
+    })
+    // 2) Token Supabase Auth (JWKS, ES256/RS256 asymétrique)
+    .AddJwtBearer("Supabase", opt =>
     {
         opt.MapInboundClaims = false;
         opt.ConfigurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
             jwksUrl,
             new OpenIdConnectConfigurationRetriever(),
             new HttpDocumentRetriever { RequireHttps = true });
-
         opt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -66,66 +169,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ClockSkew = TimeSpan.FromMinutes(1),
         };
-
-        opt.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context =>
-            {
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogWarning("Échec validation JWT : {Message}", context.Exception.Message);
-                return Task.CompletedTask;
-            },
-            OnTokenValidated = async context =>
-            {
-                // Pas de requête sur profiles ici (évite de saturer le pool de connexions).
-                // Le rôle est déterminé directement depuis les claims JWT Supabase.
-                var sub = context.Principal?.FindFirst("sub")?.Value;
-                var emailClaim = context.Principal?.FindFirst("email")?.Value ?? "";
-                var identity = (ClaimsIdentity)context.Principal!.Identity!;
-
-                identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, sub ?? Guid.NewGuid().ToString()));
-                identity.AddClaim(new Claim(ClaimTypes.Email, emailClaim));
-                identity.AddClaim(new Claim(ClaimTypes.Name, emailClaim));
-
-                var isAdmin = emailClaim == "miaroandriamanalintsoa007@gmail.com" || emailClaim == "herizoandrian8@gmail.com";
-                identity.AddClaim(new Claim(ClaimTypes.Role, isAdmin ? "Admin" : "Enseignant"));
-
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-
-                // Une seule requête légère pour lier l'enseignant (utilisé par EDT/me, cours/me, etc.)
-                // Comparaison insensible à la casse (EF.Functions.ILike) pour éviter les faux négatifs
-                // dus à une différence de casse entre l'email Supabase Auth et l'email en base.
-                try
-                {
-                    var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-
-                    var enseignant = await db.Enseignants.AsNoTracking()
-                        .FirstOrDefaultAsync(e => EF.Functions.ILike(e.Email, emailClaim));
-
-                    if (enseignant is not null)
-                    {
-                        identity.AddClaim(new Claim("enseignantId", enseignant.Id.ToString()));
-                        logger.LogInformation(
-                            "Claim enseignantId ajouté pour '{Email}' -> {EnseignantId}",
-                            emailClaim, enseignant.Id);
-                    }
-                    else if (!isAdmin)
-                    {
-                        // Compte enseignant Supabase sans ligne correspondante dans Enseignants :
-                        // toutes les routes "/me" liées à un enseignant renverront 403.
-                        logger.LogWarning(
-                            "Aucun enseignant trouvé en base pour l'email '{Email}' — le claim 'enseignantId' ne sera pas ajouté.",
-                            emailClaim);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Erreur lors de la résolution de l'enseignant pour '{Email}'", emailClaim);
-                    // Ignorer — le claim enseignantId est optionnel
-                }
-            },
-        };
+        opt.Events = jwtEvents;
     });
+
 builder.Services.AddAuthorization();
 
 // --- CORS ---
@@ -155,6 +201,14 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityDefinition("Bearer", jwtScheme);
     c.AddSecurityRequirement(new OpenApiSecurityRequirement { { jwtScheme, Array.Empty<string>() } });
 });
+
+// Validation des configurations critiques au démarrage
+var serviceRoleKey = cfg["Supabase:ServiceRoleKey"];
+if (string.IsNullOrWhiteSpace(serviceRoleKey))
+    throw new InvalidOperationException(
+        "Supabase:ServiceRoleKey n'est pas configuré. " +
+        "Définissez la variable d'environnement Supabase__ServiceRoleKey " +
+        "ou configurez-la dans appsettings.Development.json / launchSettings.json");
 
 var app = builder.Build();
 

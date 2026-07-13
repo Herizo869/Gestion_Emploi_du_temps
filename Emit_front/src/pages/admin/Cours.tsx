@@ -156,55 +156,55 @@ export default function AdminCours() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Cours</h1>
-          <p className="text-sm text-slate-500">{cours.length} cours enregistrés</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Cours</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{cours.length} cours enregistrés</p>
         </div>
         <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openAdd}>Ajouter un cours</Button>
       </div>
 
       {/* Statistiques */}
       <div className="grid gap-4 sm:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-700">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-blue-50 p-2.5">
               <BookOpen className="h-5 w-5 text-emit-blue" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-              <p className="text-xs text-slate-500">Total cours</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.total}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Total cours</p>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-700">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-purple-50 p-2.5">
               <Clock className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{stats.volumeTotal}h</p>
-              <p className="text-xs text-slate-500">Volume total</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.volumeTotal}h</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Volume total</p>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-700">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-green-50 p-2.5">
               <BarChart3 className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{stats.heuresPlanifiees}h</p>
-              <p className="text-xs text-slate-500">Heures planifiées</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.heuresPlanifiees}h</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Heures planifiées</p>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-700">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-orange-50 p-2.5">
               <TrendingUp className="h-5 w-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{stats.progressionMoyenne}%</p>
-              <p className="text-xs text-slate-500">Progression moyenne</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.progressionMoyenne}%</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Progression moyenne</p>
             </div>
           </div>
         </div>
@@ -221,25 +221,25 @@ export default function AdminCours() {
                 placeholder="Rechercher..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-emit-blue focus:outline-none focus:ring-1 focus:ring-emit-blue"
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-emit-blue focus:outline-none focus:ring-1 focus:ring-emit-blue dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
             <select
-              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               value={filterNiveau} onChange={e => setFilterNiveau(e.target.value)}
             >
               <option value="">Tous niveaux</option>
               {niveaux.map(n => <option key={n.id}>{n.libelle}</option>)}
             </select>
             <select
-              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               value={filterFiliere} onChange={e => setFilterFiliere(e.target.value)}
             >
               <option value="">Toutes filières</option>
               {toutesLesFilieres.map(f => <option key={f}>{f}</option>)}
             </select>
             <select
-              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               value={filterType} onChange={e => setFilterType(e.target.value)}
             >
               <option value="">Tous types</option>
@@ -248,7 +248,7 @@ export default function AdminCours() {
             <div className="relative">
               <Layers className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <select
-                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm"
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                 value={sortBy} onChange={e => setSortBy(e.target.value as SortKey)}
               >
                 <option value="intitule">Tri : Matière</option>
@@ -262,8 +262,8 @@ export default function AdminCours() {
 
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <AlertTriangle className="h-12 w-12 text-slate-300 mb-3" />
-              <p className="text-center text-slate-400">Aucun cours ne correspond à vos critères</p>
+              <AlertTriangle className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-3" />
+              <p className="text-center text-slate-400 dark:text-slate-500">Aucun cours ne correspond à vos critères</p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -275,14 +275,14 @@ export default function AdminCours() {
                   <div
                     key={c.id}
                     onClick={() => navigate(`/admin/edt`)}
-                    className="group rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                    className="group rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer dark:border-slate-700 dark:from-slate-800 dark:to-slate-700"
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{cfg.icon}</span>
-                          <h3 className="font-semibold text-slate-800 truncate">{c.intitule}</h3>
+                          <h3 className="font-semibold text-slate-800 truncate dark:text-slate-100">{c.intitule}</h3>
                         </div>
                         <div className="flex gap-1.5 mt-2">
                           <Badge tone={cfg.tone}>{c.type}</Badge>
@@ -290,10 +290,10 @@ export default function AdminCours() {
                         </div>
                       </div>
                       <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="rounded p-2 hover:bg-slate-200 transition-colors" title="Modifier" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
+                        <button className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" title="Modifier" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
                           <Edit2 className="h-4 w-4 text-slate-600" />
                         </button>
-                        <button className="rounded p-2 hover:bg-red-100 transition-colors" title="Supprimer" onClick={(e) => { e.stopPropagation(); setConfirm(c); }}>
+                        <button className="rounded p-2 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" title="Supprimer" onClick={(e) => { e.stopPropagation(); setConfirm(c); }}>
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </button>
                       </div>
@@ -302,24 +302,24 @@ export default function AdminCours() {
                     {/* Volume et avancement */}
                     <div className="space-y-2 mb-3">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">
+                        <span className="text-slate-600 dark:text-slate-400">
                           <Clock className="inline h-3.5 w-3.5 mr-1" />
                           Charge horaire
                         </span>
-                        <span className="font-semibold">{c.volumeHoraire}h</span>
+                        <span className="font-semibold dark:text-slate-100">{c.volumeHoraire}h</span>
                       </div>
                       <div className="space-y-1">
-                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                           <div
                             className={`h-full transition-all duration-500 rounded-full ${progressionColor(pct)}`}
                             style={{ width: `${Math.min(pct, 100)}%` }}
                           />
                         </div>
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500">
+                          <span className="text-slate-500 dark:text-slate-400">
                             {c.heuresPlanifiees}h planifiées
                           </span>
-                          <span className={`font-medium ${restantes > 0 ? "text-slate-600" : "text-green-600"}`}>
+                          <span className={`font-medium ${restantes > 0 ? "text-slate-600 dark:text-slate-400" : "text-green-600 dark:text-green-400"}`}>
                             {restantes > 0 ? `${restantes}h restantes` : "✅ Complet"}
                           </span>
                         </div>
@@ -327,13 +327,13 @@ export default function AdminCours() {
                     </div>
 
                     {/* Enseignants */}
-                    <div className="pt-3 border-t border-slate-100">
-                      <p className="text-xs font-medium text-slate-600 mb-1.5 flex items-center gap-1">
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-700">
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1">
                         <Users className="h-3 w-3" />
                         Enseignants
                       </p>
                       {c.enseignantIds.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic">Non assignés</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">Non assignés</p>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {enseignants
@@ -351,7 +351,7 @@ export default function AdminCours() {
               })}
             </div>
           )}
-          <div className="mt-3 text-xs text-slate-500">{filtered.length} résultat(s)</div>
+          <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">{filtered.length} résultat(s)</div>
         </CardBody>
       </Card>
 
@@ -370,7 +370,7 @@ export default function AdminCours() {
         }
       >
         {error && (
-          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">{error}</p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
@@ -384,7 +384,7 @@ export default function AdminCours() {
             onChange={e => setForm(p => ({ ...p, volumeHoraire: Number(e.target.value) }))}
           />
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
             <select
               value={form.type}
               onChange={e => setForm(p => ({ ...p, type: e.target.value as CoursType }))}
@@ -394,7 +394,7 @@ export default function AdminCours() {
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Niveau</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Niveau</label>
             <select
               value={form.niveauId}
               onChange={e => setForm(p => ({ ...p, niveauId: e.target.value, filiereId: "" }))}
@@ -405,7 +405,7 @@ export default function AdminCours() {
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Filière</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Filière</label>
             <select
               value={form.filiereId}
               onChange={e => setForm(p => ({ ...p, filiereId: e.target.value }))}
@@ -416,20 +416,20 @@ export default function AdminCours() {
             </select>
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Enseignants qualifiés</label>
-            <div className="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Enseignants qualifiés</label>
+            <div className="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2 dark:border-slate-700 dark:bg-slate-800/50">
               {enseignants.length === 0 && (
-                <p className="py-2 text-center text-xs text-slate-400">Aucun enseignant disponible</p>
+                <p className="py-2 text-center text-xs text-slate-400 dark:text-slate-500">Aucun enseignant disponible</p>
               )}
               {enseignants.map(e => (
-                <label key={e.id} className="flex cursor-pointer items-center gap-2 rounded p-1 text-sm hover:bg-slate-50">
+                <label key={e.id} className="flex cursor-pointer items-center gap-2 rounded p-1 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">
                   <input
                     type="checkbox"
                     checked={form.enseignantIds.includes(e.id)}
                     onChange={() => toggleEnseignant(e.id)}
                   />
                   {e.prenom} {e.nom}
-                  <span className="text-xs text-slate-500">— {e.specialite}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">— {e.specialite}</span>
                 </label>
               ))}
             </div>
@@ -452,15 +452,15 @@ export default function AdminCours() {
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500 shrink-0" />
           <div>
-            <p className="text-sm text-slate-700">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
               Supprimer <strong>{confirm?.intitule}</strong> ?
             </p>
             {confirm && confirm.heuresPlanifiees > 0 && (
-              <p className="mt-1 text-xs text-orange-600">
+              <p className="mt-1 text-xs text-orange-600 dark:text-orange-400">
                 ⚠️ Ce cours a {confirm.heuresPlanifiees}h déjà planifiées dans l'EDT — la suppression peut affecter le planning.
               </p>
             )}
-            <p className="mt-1 text-xs text-slate-400">Cette action est irréversible.</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Cette action est irréversible.</p>
           </div>
         </div>
       </Modal>

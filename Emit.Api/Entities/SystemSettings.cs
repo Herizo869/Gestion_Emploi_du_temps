@@ -28,6 +28,4 @@ public class SystemSettings
     public bool PwdRequireDigit { get; set; }
     public bool PwdRequireSpecial { get; set; }
 
-    /// <summary>Date de dernière modification</summary>
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

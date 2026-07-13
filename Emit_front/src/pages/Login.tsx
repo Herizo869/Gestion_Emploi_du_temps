@@ -100,18 +100,18 @@ export default function Login() {
       <div className="pointer-events-none absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-emit-blue/30 blur-3xl" />
       <div className="pointer-events-none absolute right-1/4 top-1/3 h-40 w-40 rounded-full bg-white/5" />
 
-      <div className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl transition-all duration-300">
+      <div className="relative w-full max-w-md rounded-2xl glass p-8 shadow-2xl transition-all duration-300 hover:shadow-[0_0_40px_rgba(126,200,227,0.12)]">
         {/* En-tête */}
         <div className="mb-6 flex flex-col items-center">
           <Logo />
-          <p className="mt-3 text-center text-sm text-slate-500">
+          <p className="mt-3 text-center text-sm text-slate-500 dark:text-slate-400">
             Système de gestion d'emploi du temps
           </p>
         </div>
 
         {/* ── Connexion ── */}
         <>
-          <h2 className="mb-5 text-center text-xl font-semibold text-slate-800">
+          <h2 className="mb-5 text-center text-xl font-semibold text-slate-800 dark:text-slate-100">
             <LogIn className="mb-1 mr-2 inline-block h-5 w-5 text-emit-blue" />
             Connexion
           </h2>
@@ -138,7 +138,7 @@ export default function Login() {
               onChange={(e) => setPwd(e.target.value)}
               leftIcon={<Lock className="h-4 w-4" />}
               rightIcon={
-                <button type="button" onClick={() => setShow(!show)} className="hover:text-slate-600">
+                <button type="button" onClick={() => setShow(!show)} className="hover:text-slate-600 dark:hover:text-slate-300">
                   {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               }
@@ -167,7 +167,7 @@ export default function Login() {
 function ErrorBanner({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+    <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{message}</span>
     </div>
@@ -179,8 +179,8 @@ function ErrorBanner({ message }: { message: string | null }) {
 // Enseignant : identifiants du DbSeeder
 function DevFill({ onFill }: { onFill: (email: string, pwd: string) => void }) {
   return (
-    <div className="mt-6 border-t border-slate-100 pt-4">
-      <p className="mb-2 text-center text-[11px] uppercase tracking-wider text-slate-400">
+    <div className="mt-6 border-t border-slate-100 dark:border-slate-700 pt-4">
+      <p className="mb-2 text-center text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500">
         Accès rapide (dev)
       </p>
       <div className="grid grid-cols-2 gap-2">
@@ -203,7 +203,7 @@ function DevFill({ onFill }: { onFill: (email: string, pwd: string) => void }) {
           Enseignant
         </Button>
       </div>
-      <p className="mt-1 text-center text-[10px] text-slate-300">
+      <p className="mt-1 text-center text-[10px] text-slate-300 dark:text-slate-600">
         Admin : miaroandriamanalintsoa007@gmail.com
       </p>
     </div>

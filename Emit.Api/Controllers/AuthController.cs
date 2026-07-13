@@ -117,12 +117,14 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<ActionResult<UserDto>> UpdateProfile(UpdateProfileDto dto)
     {
-        var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(idStr, out var id)) return Unauthorized();
-        var u = await _db.Users.FindAsync(id);
+        // 🔑 Chercher par email (ClaimTypes.Email = email Supabase Auth)
+        var emailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
+        if (string.IsNullOrEmpty(emailClaim)) return Unauthorized();
+
+        var u = await _db.Users.FirstOrDefaultAsync(x => x.Email == emailClaim);
         if (u is null) return NotFound();
 
-        // Vérifier si l'email est déjà pris par un autre utilisateur
+        // Vérifier si le nouvel email est déjà pris par un autre utilisateur
         if (u.Email != dto.Email && await _db.Users.AnyAsync(x => x.Email == dto.Email))
             return Conflict(new { message = "Email déjà utilisé" });
 
@@ -142,9 +144,11 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<ActionResult> ChangePassword(ChangePasswordDto dto)
     {
-        var idStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!Guid.TryParse(idStr, out var id)) return Unauthorized();
-        var u = await _db.Users.FindAsync(id);
+        // 🔑 Chercher par email (ClaimTypes.Email = email Supabase Auth)
+        var emailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
+        if (string.IsNullOrEmpty(emailClaim)) return Unauthorized();
+
+        var u = await _db.Users.FirstOrDefaultAsync(x => x.Email == emailClaim);
         if (u is null) return NotFound();
 
         if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, u.PasswordHash))
