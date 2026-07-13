@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<LogEntry> Journal => Set<LogEntry>();
     public DbSet<Disponibilite> Disponibilites => Set<Disponibilite>();
+    public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

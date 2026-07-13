@@ -213,6 +213,34 @@ export interface ExportParams {
   orientation?: "portrait" | "paysage";
 }
 
+// ───── Paramètres Système (Admin) ────────────────────────
+
+export interface SystemSettingsData {
+  etablissementNom: string;
+  etablissementSousTitre: string;
+  emailEnabled: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  fromEmail: string;
+  fromName: string;
+  loginUrl: string;
+  pwdMinLength: number;
+  pwdRequireUppercase: boolean;
+  pwdRequireDigit: boolean;
+  pwdRequireSpecial: boolean;
+}
+
+export const apiGetSettings = () =>
+  request<SystemSettingsData>("/api/settings");
+
+export const apiUpdateSettings = (data: SystemSettingsData) =>
+  request<SystemSettingsData>("/api/settings", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+
 // ───── Vérification EDT enseignant ─────────────────────────
 
 export interface EdtCheckParams {
