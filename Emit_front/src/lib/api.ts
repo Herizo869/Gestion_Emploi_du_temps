@@ -57,6 +57,24 @@ export interface MeResponse {
   role: string;
   enseignantId: string | null;
 }
+export interface AuthResponseUser {
+  id: string;
+  prenom: string;
+  nom: string;
+  email: string;
+  role: string;
+  enseignantId: string | null;
+}
+export interface AuthResponse {
+  token: string;
+  user: AuthResponseUser;
+}
+export const apiLogin = (email: string, password: string) =>
+  request<AuthResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+
 export const apiMe = () => request<MeResponse>("/api/auth/me");
 export const apiUpdateProfile = (data: { prenom: string; nom: string; email: string }) =>
   request<User>("/api/auth/me", { method: "PUT", body: JSON.stringify(data) });
