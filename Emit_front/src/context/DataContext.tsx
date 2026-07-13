@@ -4,8 +4,6 @@ import {
   apiEnseignants, apiSalles, apiCours, apiNiveaux, apiSemestres,
   apiEdt, apiEdtMe, apiNotifications, apiJournal,
 } from "@/lib/api";
-import { createNotificationsConnection } from "@/lib/notificationsHub";
-import type { HubConnection } from "@microsoft/signalr";
 import { useAuth } from "./AuthContext";
 
 interface DataCtx {
@@ -72,34 +70,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // ── Connexion temps réel au Hub des notifications ─────────────────────────
-  // Remplace le besoin de re-fetch manuel : les nouvelles notifications
-  // arrivent en push et sont ajoutées en tête de liste.
-  const hubRef = useRef<HubConnection | null>(null);
 
-  useEffect(() => {
-    if (!user) {
-      hubRef.current?.stop();
-      hubRef.current = null;
-      return;
-    }
 
-    const connection = createNotificationsConnection();
-    hubRef.current = connection;
-
-    connection.on("ReceiveNotification", (notif: Notif) => {
-      setNotifications((prev) => [notif, ...prev]);
-    });
-
-    connection.start().catch((err) => {
-      console.error("[SignalR] Échec de connexion au Hub notifications :", err);
-    });
-
-    return () => {
-      connection.stop();
-      if (hubRef.current === connection) hubRef.current = null;
-    };
-  }, [user]);
+  
 
   return (
     <Ctx.Provider
