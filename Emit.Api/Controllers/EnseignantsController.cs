@@ -160,9 +160,33 @@ public class EnseignantsController : ControllerBase
     {
         var e = await _db.Enseignants.FindAsync(id);
         if (e is null) return NotFound();
+
+        // 1️⃣ Supprimer le compte Supabase Auth (entraîne la suppression en cascade
+        //    de la ligne public.profiles si la FK est en ON DELETE CASCADE)
+        string? supabaseWarning = null;
+        if (!string.IsNullOrEmpty(e.SupabaseAuthUserId))
+        {
+            var error = await _supabase.DeleteUserAsync(e.SupabaseAuthUserId);
+            if (error != null)
+            {
+                _logger.LogWarning("Échec suppression compte Supabase Auth pour {Email}: {Error}", e.Email, error);
+                supabaseWarning = $"Le compte de connexion (Supabase) n'a pas pu être supprimé automatiquement : {error}. " +
+                                   "Supprimez-le manuellement depuis le Dashboard Supabase (Authentication > Users) si nécessaire.";
+            }
+        }
+
+        // 2️⃣ Supprimer le compte local (table Users, hash bcrypt) lié à cet enseignant
+        var localUser = await _db.Users.FirstOrDefaultAsync(u => u.EnseignantId == id);
+        if (localUser is not null)
+            _db.Users.Remove(localUser);
+
+        // 3️⃣ Supprimer l'enseignant lui-même (cours/disponibilités/slots liés selon la config EF)
         _db.Enseignants.Remove(e);
         _db.Journal.Add(new LogEntry { Action = LogAction.Suppression, Entite = $"Enseignant {e.Prenom} {e.Nom}" });
         await _db.SaveChangesAsync();
-        return NoContent();
+
+        return supabaseWarning is null
+            ? NoContent()
+            : Ok(new { message = "Enseignant supprimé.", warning = supabaseWarning });
     }
 }
