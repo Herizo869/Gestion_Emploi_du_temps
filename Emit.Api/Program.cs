@@ -31,6 +31,7 @@ builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogL
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEdtGeneratorService, EdtGeneratorService>();
+builder.Services.AddSingleton<IGenerationProgressTracker, GenerationProgressTracker>();
 
 // Nécessaire pour SupabaseAdminService (IHttpClientFactory injecté dans son constructeur)
 builder.Services.AddHttpClient();

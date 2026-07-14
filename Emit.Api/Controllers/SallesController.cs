@@ -53,6 +53,11 @@ public class SallesController : ControllerBase
     {
         var s = await _db.Salles.FindAsync(id);
         if (s is null) return NotFound();
+
+        // Supprimer d'abord les créneaux EDT liés à cette salle (FK Restrict)
+        var slots = await _db.Slots.Where(sl => sl.SalleId == id).ToListAsync();
+        _db.Slots.RemoveRange(slots);
+
         _db.Salles.Remove(s);
         _db.Journal.Add(new LogEntry { Action = LogAction.Suppression, Entite = $"Salle {s.Numero}" });
         await _db.SaveChangesAsync();

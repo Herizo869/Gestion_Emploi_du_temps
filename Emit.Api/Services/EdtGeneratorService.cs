@@ -19,10 +19,65 @@ public class EdtGenerationResult
     public List<ConflitDto> Conflits { get; set; } = new();
 }
 
+public class EdtGenerationProgress
+{
+    public int Pourcentage { get; set; }
+    public string Etape { get; set; } = "Préparation…";
+    public bool Termine { get; set; }
+}
+
+public interface IGenerationProgressTracker
+{
+    void Reset();
+    EdtGenerationProgress GetProgress();
+    void SetProgress(int pct, string etape);
+    void SetProgressFinished();
+}
+
+public class GenerationProgressTracker : IGenerationProgressTracker
+{
+    private EdtGenerationProgress _progress = new();
+    private readonly object _lock = new();
+
+    public void Reset()
+    {
+        lock (_lock) { _progress = new EdtGenerationProgress(); }
+    }
+
+    public EdtGenerationProgress GetProgress()
+    {
+        lock (_lock) { return new EdtGenerationProgress
+        {
+            Pourcentage = _progress.Pourcentage,
+            Etape = _progress.Etape,
+            Termine = _progress.Termine,
+        }; }
+    }
+
+    public void SetProgress(int pct, string etape)
+    {
+        lock (_lock)
+        {
+            _progress.Pourcentage = pct;
+            _progress.Etape = etape;
+        }
+    }
+
+    public void SetProgressFinished()
+    {
+        lock (_lock) { _progress.Termine = true; }
+    }
+}
+
 public class EdtGeneratorService : IEdtGeneratorService
 {
     private readonly AppDbContext _db;
-    public EdtGeneratorService(AppDbContext db) => _db = db;
+    private readonly IGenerationProgressTracker _progress;
+    public EdtGeneratorService(AppDbContext db, IGenerationProgressTracker progress)
+    {
+        _db = db;
+        _progress = progress;
+    }
 
     // Créneaux standards (jour + horaire)
     private static readonly (TimeOnly debut, TimeOnly fin)[] Creneaux = new[]
@@ -145,9 +200,12 @@ public class EdtGeneratorService : IEdtGeneratorService
 
     public async Task<EdtGenerationResult> GenerateAsync(Guid semestreId)
     {
+        _progress.Reset();
+
         var semestre = await _db.Semestres.FindAsync(semestreId)
             ?? throw new InvalidOperationException("Semestre introuvable");
 
+        _progress.SetProgress(5, "Nettoyage des anciens créneaux…");
         // Supprimer les slots existants du semestre
         var existing = await _db.Slots.Where(s => s.SemestreId == semestreId).ToListAsync();
         _db.Slots.RemoveRange(existing);
@@ -155,6 +213,7 @@ public class EdtGeneratorService : IEdtGeneratorService
 
         var result = new EdtGenerationResult();
 
+        _progress.SetProgress(10, "Analyse des heures restantes…");
         // Recalculer HeuresPlanifiees depuis les slots des autres semestres
         var remainingSlots = await _db.Slots
             .GroupBy(s => s.CoursId)
@@ -174,9 +233,11 @@ public class EdtGeneratorService : IEdtGeneratorService
         }
         await _db.SaveChangesAsync();
 
+        _progress.SetProgress(20, "Chargement des disponibilités…");
         var salles = await _db.Salles.Where(s => s.Disponible).ToListAsync();
         var (disponibilites, indisponibilites) = await ChargerDisponibilitesAsync(semestreId);
 
+        _progress.SetProgress(30, "Placement des cours (phase 1/3)…");
         // Index des occupations en mémoire
         var busyEnseignant = new HashSet<(Guid, Jour, TimeOnly)>();
         var busySalle      = new HashSet<(Guid, Jour, TimeOnly)>();
@@ -190,6 +251,9 @@ public class EdtGeneratorService : IEdtGeneratorService
             .Concat(coursSansDispos.OrderByDescending(c => c.VolumeHoraire))
             .ToList();
 
+        var totalCours = coursOrdonnes.Count;
+        var coursTraites = 0;
+
         foreach (var c in coursOrdonnes)
         {
             int heuresRestantes   = c.VolumeHoraire - c.HeuresPlanifiees;
@@ -200,6 +264,7 @@ public class EdtGeneratorService : IEdtGeneratorService
             if (enseignant == null)
             {
                 result.CoursNonPlanifies.Add($"{c.Intitule} (pas d'enseignant)");
+                coursTraites++;
                 continue;
             }
 
@@ -250,11 +315,16 @@ public class EdtGeneratorService : IEdtGeneratorService
 
             c.HeuresPlanifiees += placees;
 
+            coursTraites++;
+            var pctPlacement = 30 + (int)((double)coursTraites / totalCours * 55);
+            _progress.SetProgress(pctPlacement, $"Placement des cours ({coursTraites}/{totalCours})…");
+
             if (placees < seancesNecessaires)
                 result.CoursNonPlanifies.Add(
                     $"{c.Intitule} ({placees}/{seancesNecessaires} séances placées)");
         }
 
+        _progress.SetProgress(85, "Sauvegarde des données…");
         _db.Journal.Add(new LogEntry
         {
             Action  = LogAction.Generation,
@@ -264,9 +334,15 @@ public class EdtGeneratorService : IEdtGeneratorService
 
         await _db.SaveChangesAsync();
 
+        _progress.SetProgress(90, "Recalcul de l'occupation des salles…");
         // Recalculer l'occupation des salles après la génération
         await RecalculateOccupationsAsync();
+
+        _progress.SetProgress(95, "Détection des conflits…");
         result.Conflits = await DetectConflitsAsync(semestreId);
+
+        _progress.SetProgress(100, "Génération terminée");
+        _progress.SetProgressFinished();
         return result;
     }
 

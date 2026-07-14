@@ -175,12 +175,24 @@ public class EnseignantsController : ControllerBase
             }
         }
 
-        // 2️⃣ Supprimer le compte local (table Users, hash bcrypt) lié à cet enseignant
+        // 2️⃣ Supprimer les créneaux EDT liés à cet enseignant (FK Restrict)
+        var slots = await _db.Slots.Where(s => s.EnseignantId == id).ToListAsync();
+        _db.Slots.RemoveRange(slots);
+
+        // 3️⃣ Supprimer les disponibilités liées à cet enseignant
+        var dispos = await _db.Disponibilites.Where(d => d.EnseignantId == id).ToListAsync();
+        _db.Disponibilites.RemoveRange(dispos);
+
+        // 4️⃣ Supprimer les liens cours-enseignant
+        var liensCours = await _db.CoursEnseignants.Where(ce => ce.EnseignantId == id).ToListAsync();
+        _db.CoursEnseignants.RemoveRange(liensCours);
+
+        // 5️⃣ Supprimer le compte local (table Users, hash bcrypt) lié à cet enseignant
         var localUser = await _db.Users.FirstOrDefaultAsync(u => u.EnseignantId == id);
         if (localUser is not null)
             _db.Users.Remove(localUser);
 
-        // 3️⃣ Supprimer l'enseignant lui-même (cours/disponibilités/slots liés selon la config EF)
+        // 6️⃣ Supprimer l'enseignant lui-même
         _db.Enseignants.Remove(e);
         _db.Journal.Add(new LogEntry { Action = LogAction.Suppression, Entite = $"Enseignant {e.Prenom} {e.Nom}" });
         await _db.SaveChangesAsync();

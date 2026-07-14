@@ -80,6 +80,19 @@ public class CoursController : ControllerBase
     {
         var c = await _db.Cours.FindAsync(id);
         if (c is null) return NotFound();
+
+        // Supprimer les créneaux EDT liés
+        var slots = await _db.Slots.Where(s => s.CoursId == id).ToListAsync();
+        _db.Slots.RemoveRange(slots);
+
+        // Supprimer les disponibilités liées
+        var dispos = await _db.Disponibilites.Where(d => d.CoursId == id).ToListAsync();
+        _db.Disponibilites.RemoveRange(dispos);
+
+        // Supprimer les liens enseignants
+        var liens = await _db.CoursEnseignants.Where(ce => ce.CoursId == id).ToListAsync();
+        _db.CoursEnseignants.RemoveRange(liens);
+
         _db.Cours.Remove(c);
         _db.Journal.Add(new LogEntry { Action = LogAction.Suppression, Entite = $"Cours {c.Intitule}" });
         await _db.SaveChangesAsync();

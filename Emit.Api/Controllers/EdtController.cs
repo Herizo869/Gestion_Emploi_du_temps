@@ -17,14 +17,17 @@ public class EdtController : ControllerBase
 
     private readonly AppDbContext _db;
     private readonly IEdtGeneratorService _gen;
+    private readonly IGenerationProgressTracker _progress;
 
 
     public EdtController(
         AppDbContext db,
-        IEdtGeneratorService gen)
+        IEdtGeneratorService gen,
+        IGenerationProgressTracker progress)
     {
         _db = db;
         _gen = gen;
+        _progress = progress;
     }
 
 
@@ -192,6 +195,22 @@ public class EdtController : ControllerBase
         return Ok(result);
     }
 
+
+
+
+
+    // ===============================
+    // PROGRESSION GENERATION
+    // ===============================
+
+
+    [HttpGet("generate/{semestreId:guid}/progress")]
+    [Authorize(Roles="Admin")]
+    public ActionResult<EdtGenerationProgress> Progress(
+        Guid semestreId)
+    {
+        return Ok(_progress.GetProgress());
+    }
 
 
 
