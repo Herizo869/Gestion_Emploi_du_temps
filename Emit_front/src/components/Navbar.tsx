@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Building2, BookOpen, GraduationCap,
   CalendarRange, Zap, CalendarDays, History, User, Settings,
   Calendar, Bell, KeyRound, LogOut, ListChecks, ChevronDown, Menu, X,
-  AlertTriangle, Clock, MapPin, RefreshCw, Moon, Sun,
+  AlertTriangle, Clock, MapPin, RefreshCw, Moon, Sun, Sparkles
 } from "lucide-react";
 import Logo from "./Logo";
 import { useAuth } from "@/context/AuthContext";
@@ -61,7 +61,7 @@ const ENSEIGNANT: Group[] = [
   },
 ];
 
-export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
+export default function Navbar({ role, onToggleAi }: { role: "admin" | "enseignant"; onToggleAi?: () => void }) {
   const groups = role === "admin" ? ADMIN : ENSEIGNANT;
   const { user, logout } = useAuth();
   const { isDark, toggle } = useTheme();
@@ -198,6 +198,19 @@ export default function Navbar({ role }: { role: "admin" | "enseignant" }) {
           >
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
+
+          {/* AI Assistant Toggle (Admin Only) */}
+          {role === "admin" && (
+            <button
+              onClick={() => {
+                if (onToggleAi) onToggleAi();
+              }}
+              className="flex items-center gap-2 rounded-lg bg-emit-navy px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emit-sky hover:shadow-md dark:bg-emit-sky dark:text-slate-900 dark:hover:bg-white"
+            >
+              <Sparkles className="h-4 w-4" />
+              Agent IA
+            </button>
+          )}
 
           {/* Notifications */}
           <div className="relative">
