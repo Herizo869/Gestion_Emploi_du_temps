@@ -14,6 +14,18 @@ import {
   Zap,
   Users,
   Terminal,
+  Building2,
+  ClipboardList,
+  AlertTriangle,
+  Calendar,
+  Folder,
+  Bell,
+  BarChart3,
+  Shield,
+  Key,
+  Settings,
+  Mail,
+  GraduationCap
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import Button from "@/components/ui/Button";
@@ -209,8 +221,8 @@ function SideNav() {
             {label}
           </span>
           <span className={`block rounded-full transition-all duration-300 ${idx === active
-              ? "w-3 h-3 bg-emit-sky shadow-[0_0_8px_rgba(126,200,227,0.8)]"
-              : "w-2 h-2 bg-white/30 hover:bg-white/60"
+            ? "w-3 h-3 bg-emit-sky shadow-[0_0_8px_rgba(126,200,227,0.8)]"
+            : "w-2 h-2 bg-white/30 hover:bg-white/60"
             }`} />
         </button>
       ))}
@@ -227,9 +239,14 @@ export default function Landing() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#081234] text-white selection:bg-emit-sky selection:text-emit-navy overflow-x-hidden">
+    <div className="font-poppins relative min-h-screen bg-[#081234] text-white selection:bg-emit-sky selection:text-emit-navy overflow-x-hidden">
       {/* ── Global Keyframes ─────────────────────────────────────────────────── */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        
+        .font-poppins {
+          font-family: 'Poppins', sans-serif;
+        }
         @keyframes blob1 {
           0%,100% { transform: translate(0,0) scale(1); }
           33%      { transform: translate(60px,-80px) scale(1.15); }
@@ -309,9 +326,6 @@ export default function Landing() {
       <header className="fixed top-[3px] left-0 right-0 z-50 flex w-full items-center justify-between px-6 py-4 md:px-12 border-b border-white/5 bg-[#081234]/60 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <Logo />
-          <span className="hidden sm:inline-block border-l border-white/20 pl-3 text-xs tracking-widest uppercase text-emit-sky font-bold">
-            Présentation Projet
-          </span>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/edt" className="rounded-lg px-4 py-2 text-sm font-medium text-emit-sky hover:text-white hover:bg-white/5 transition-all">
@@ -335,16 +349,9 @@ export default function Landing() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       <Section id="slide-hero" className="flex min-h-screen flex-col items-center justify-center px-6 pt-24 pb-12 md:px-12 max-w-7xl mx-auto w-full">
         <div className="text-center space-y-7 max-w-4xl">
-          <Animated variant="fade-down" delay={0}>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-4 py-1.5 text-xs text-emit-sky hover:border-emit-sky/40 transition-all">
-              <Sparkles className="h-3.5 w-3.5 animate-spin" style={{ animationDuration: "3s" }} />
-              Soutenance de Projet L3 — 2026
-            </div>
-          </Animated>
-
           <Animated variant="fade-up" delay={150}>
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl md:text-7xl leading-tight">
-              <Typewriter texts={["Gestion des Emplois du Temps", "Planification Automatisée", "Solution EMIT 2026"]} />
+              <Typewriter texts={["Gestion des Emplois du Temps", "Planification Automatisée", "Solution EDT EMIT"]} />
             </h1>
           </Animated>
 
@@ -418,13 +425,13 @@ export default function Landing() {
             </Animated>
             <div className="space-y-5">
               {[
-                { icon: "⚡", title: "Chevauchements d'horaires", desc: "Éviter qu'un enseignant ou une classe soit affecté à deux cours simultanément.", delay: 0 },
-                { icon: "🏛️", title: "Capacité des salles", desc: "Faire correspondre l'effectif (L1, L2, L3…) avec la capacité réelle de chaque salle.", delay: 100 },
-                { icon: "📋", title: "Disponibilités enseignants", desc: "Prendre en compte les contraintes personnelles et professionnelles de chaque intervenant.", delay: 200 },
+                { icon: <Zap className="h-6 w-6 text-yellow-400" />, title: "Chevauchements d'horaires", desc: "Éviter qu'un enseignant ou une classe soit affecté à deux cours simultanément.", delay: 0 },
+                { icon: <Building2 className="h-6 w-6 text-emit-sky" />, title: "Capacité des salles", desc: "Faire correspondre l'effectif (L1, L2, L3…) avec la capacité réelle de chaque salle.", delay: 100 },
+                { icon: <ClipboardList className="h-6 w-6 text-emerald-400" />, title: "Disponibilités enseignants", desc: "Prendre en compte les contraintes personnelles et professionnelles de chaque intervenant.", delay: 200 },
               ].map(({ icon, title, desc, delay }) => (
                 <Animated key={title} variant="fade-right" delay={delay}>
                   <div className="group flex items-start gap-4 rounded-xl p-4 border border-white/5 bg-white/3 hover:bg-white/5 hover:border-red-500/20 transition-all duration-300 card-glow">
-                    <span className="text-2xl transition-transform group-hover:scale-110 duration-300">{icon}</span>
+                    <span className="flex-shrink-0 transition-transform group-hover:scale-110 duration-300">{icon}</span>
                     <div>
                       <h4 className="font-bold text-white text-sm group-hover:text-red-400 transition-colors">{title}</h4>
                       <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{desc}</p>
@@ -439,7 +446,7 @@ export default function Landing() {
             <div className="relative rounded-2xl border border-white/10 bg-gradient-to-b from-white/8 to-white/3 p-8 backdrop-blur-md shadow-2xl text-center space-y-5 card-glow transition-all duration-500 hover:border-red-400/20">
               {/* Decorative corner */}
               <div className="absolute -top-px left-6 right-6 h-px bg-gradient-to-r from-transparent via-red-400/40 to-transparent" />
-              <div className="text-5xl">🤯</div>
+              <div className="flex justify-center mb-2"><AlertTriangle className="h-12 w-12 text-red-400" /></div>
               <h3 className="font-bold text-xl text-white">L'approche traditionnelle</h3>
               <p className="text-sm text-slate-300 leading-relaxed">
                 Tableaux Excel complexes, formulaires papier égarés, modifications de dernière minute — sources d'erreurs chronophages.
@@ -559,16 +566,16 @@ export default function Landing() {
 
           <div className="lg:col-span-7 grid sm:grid-cols-2 gap-4">
             {[
-              { emoji: "🤖", title: "Génération Intelligente", desc: "Algorithme glouton respectant salles, volumes horaires et disponibilités.", color: "hover:border-emit-sky/30", delay: 0 },
-              { emoji: "📅", title: "Calendrier Interactif", desc: "Vue grille hebdomadaire avec code couleur CM / TD / TP.", color: "hover:border-indigo-400/30", delay: 50 },
-              { emoji: "🔐", title: "Double Authentification", desc: "Deux rôles hermétiques : Admin & Enseignant via Supabase JWT.", color: "hover:border-violet-400/30", delay: 100 },
-              { emoji: "📂", title: "Export Multi-Format", desc: "PDF portrait / paysage, CSV pour intégration dans d'autres outils.", color: "hover:border-emerald-400/30", delay: 150 },
-              { emoji: "🔔", title: "Notifications Push", desc: "Alerte instantanée en cas de modification de planning.", color: "hover:border-yellow-400/30", delay: 200 },
-              { emoji: "📊", title: "Dashboard Admin", desc: "Vue centralisée : taux d'occupation des salles, progression des cours.", color: "hover:border-pink-400/30", delay: 250 },
-            ].map(({ emoji, title, desc, color, delay }) => (
+              { icon: <Cpu className="h-6 w-6 text-emit-sky" />, title: "Génération Intelligente", desc: "Algorithme glouton respectant salles, volumes horaires et disponibilités.", color: "hover:border-emit-sky/30", delay: 0 },
+              { icon: <Calendar className="h-6 w-6 text-indigo-400" />, title: "Calendrier Interactif", desc: "Vue grille hebdomadaire avec code couleur CM / TD / TP.", color: "hover:border-indigo-400/30", delay: 50 },
+              { icon: <Key className="h-6 w-6 text-violet-400" />, title: "Double Authentification", desc: "Deux rôles hermétiques : Admin & Enseignant via Supabase JWT.", color: "hover:border-violet-400/30", delay: 100 },
+              { icon: <Folder className="h-6 w-6 text-emerald-400" />, title: "Export Multi-Format", desc: "PDF portrait / paysage, CSV pour intégration dans d'autres outils.", color: "hover:border-emerald-400/30", delay: 150 },
+              { icon: <Bell className="h-6 w-6 text-yellow-400" />, title: "Notifications Push", desc: "Alerte instantanée en cas de modification de planning.", color: "hover:border-yellow-400/30", delay: 200 },
+              { icon: <BarChart3 className="h-6 w-6 text-pink-400" />, title: "Dashboard Admin", desc: "Vue centralisée : taux d'occupation des salles, progression des cours.", color: "hover:border-pink-400/30", delay: 250 },
+            ].map(({ icon, title, desc, color, delay }) => (
               <Animated key={title} variant="zoom" delay={delay}>
                 <div className={`group rounded-xl border border-white/10 bg-white/4 p-5 space-y-2 transition-all duration-300 ${color} hover:bg-white/8 hover:-translate-y-1 card-glow`}>
-                  <div className="text-2xl transition-transform group-hover:scale-125 duration-300">{emoji}</div>
+                  <div className="transition-transform group-hover:scale-125 duration-300">{icon}</div>
                   <h4 className="font-bold text-white text-sm group-hover:text-emit-sky transition-colors">{title}</h4>
                   <p className="text-xs text-slate-400 leading-relaxed">{desc}</p>
                 </div>
@@ -595,13 +602,13 @@ export default function Landing() {
               </p>
               <div className="space-y-4">
                 {[
-                  { icon: "🛡️", title: "Row Level Security (RLS)", desc: "Chaque ligne de profil n'est visible que par son propriétaire." },
-                  { icon: "🔒", title: "Anti-Self-Escalation Trigger", desc: "Trigger SQL bloquant la promotion de rôle non-admin → admin." },
-                  { icon: "⚙️", title: "Auto-Profile Trigger", desc: "Création automatique avec rôle 'enseignant' à l'inscription." },
-                  { icon: "📧", title: "Email Verification", desc: "Connexion bloquée tant que l'adresse email n'est pas vérifiée." },
+                  { icon: <Shield className="h-5 w-5 text-emerald-400" />, title: "Row Level Security (RLS)", desc: "Chaque ligne de profil n'est visible que par son propriétaire." },
+                  { icon: <Lock className="h-5 w-5 text-emerald-400" />, title: "Anti-Self-Escalation Trigger", desc: "Trigger SQL bloquant la promotion de rôle non-admin → admin." },
+                  { icon: <Settings className="h-5 w-5 text-emerald-400" />, title: "Auto-Profile Trigger", desc: "Création automatique avec rôle 'enseignant' à l'inscription." },
+                  { icon: <Mail className="h-5 w-5 text-emerald-400" />, title: "Email Verification", desc: "Connexion bloquée tant que l'adresse email n'est pas vérifiée." },
                 ].map(({ icon, title, desc }) => (
                   <div key={title} className="group flex items-start gap-3 rounded-lg bg-white/3 border border-white/5 px-3 py-2.5 hover:bg-emerald-500/5 hover:border-emerald-500/15 transition-all">
-                    <span className="text-lg">{icon}</span>
+                    <span className="flex-shrink-0 pt-0.5">{icon}</span>
                     <div>
                       <p className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{title}</p>
                       <p className="text-[11px] text-slate-400 mt-0.5">{desc}</p>
@@ -766,8 +773,8 @@ export default function Landing() {
       <Section id="slide-conclusion" className="flex min-h-screen items-center justify-center px-6 py-28 md:px-12 max-w-7xl mx-auto w-full border-t border-white/5">
         <div className="text-center space-y-8 max-w-2xl">
           <Animated variant="zoom">
-            <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-emit-sky/10 text-4xl border border-emit-sky/20 mx-auto">
-              🎓
+            <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-emit-sky/10 border border-emit-sky/20 mx-auto">
+              <GraduationCap className="h-10 w-10 text-emit-sky" />
             </div>
           </Animated>
           <Animated variant="fade-up" delay={100}>
