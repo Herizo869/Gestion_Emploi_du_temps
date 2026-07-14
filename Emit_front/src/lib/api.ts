@@ -187,8 +187,17 @@ export const apiEdt = (params: {
 export const apiEdtMe = (semestreId?: string) =>
   request<SlotEDT[]>(`/api/edt/me${semestreId ? `?semestreId=${semestreId}` : ""}`);
 
+export interface GenerationProgress {
+  pourcentage: number;
+  etape: string;
+  termine: boolean;
+}
+
 export const apiGenererEdt = (semestreId: string) =>
   request<EdtGenerationResult>(`/api/edt/generate/${semestreId}`, { method: "POST" });
+
+export const apiGenererEdtProgress = (semestreId: string) =>
+  request<GenerationProgress>(`/api/edt/generate/${semestreId}/progress`);
 
 export const apiConflitsEdt = (semestreId: string) =>
   request<ConflitDto[]>(`/api/edt/${semestreId}/conflits`);

@@ -1,19 +1,37 @@
-import { useEffect, useState } from "react";
-import { Zap, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Zap, CheckCircle2, XCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { useData } from "@/context/DataContext";
-import { apiGenererEdt, type GenerationEdtResult } from "@/lib/api";
+import { apiGenererEdt, apiGenererEdtProgress, type GenerationEdtResult } from "@/lib/api";
+
+const ETAPES = [
+  "Nettoyage des anciens créneaux…",
+  "Analyse des heures restantes…",
+  "Chargement des disponibilités…",
+  "Placement des cours…",
+  "Sauvegarde des données…",
+  "Recalcul de l'occupation…",
+  "Détection des conflits…",
+];
 
 export default function AdminGenerer() {
   const { semestres, cours, enseignants, salles } = useData();
   const [semestreId, setSemestreId] = useState("");
   const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [etape, setEtape] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerationEdtResult | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
-  // Sélectionne le premier semestre en brouillon par défaut
+  // Nettoyer le polling au démontage
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  // Sélectionne le premier semestre par défaut
   useEffect(() => {
     if (!semestreId && semestres.length > 0) {
       setSemestreId(semestres[0].id);
@@ -25,15 +43,40 @@ export default function AdminGenerer() {
     setRunning(true);
     setError(null);
     setResult(null);
+    setProgress(0);
+    setEtape("Préparation…");
+
+    // Polling de progression
+    pollRef.current = setInterval(async () => {
+      try {
+        const p = await apiGenererEdtProgress(semestreId);
+        setProgress(p.pourcentage);
+        setEtape(p.etape);
+        if (p.termine) {
+          if (pollRef.current) clearInterval(pollRef.current);
+        }
+      } catch {
+        // Ignorer les erreurs de polling
+      }
+    }, 400);
+
     try {
       const res = await apiGenererEdt(semestreId);
+      setProgress(100);
+      setEtape("Génération terminée");
       setResult(res);
     } catch (e: any) {
       setError(e.message ?? "Erreur lors de la génération");
+      setProgress(0);
+      setEtape("");
     } finally {
+      if (pollRef.current) clearInterval(pollRef.current);
       setRunning(false);
     }
   };
+
+  const etapeIdx = ETAPES.findIndex(e => etape.includes(e.replace("…", "").split(" (")[0]));
+  const etapeCourante = etapeIdx >= 0 ? etapeIdx + 1 : 0;
 
   return (
     <div className="space-y-5">
@@ -75,9 +118,49 @@ export default function AdminGenerer() {
             </div>
           )}
 
-          <Button leftIcon={<Zap className="h-4 w-4" />} disabled={running || !semestreId} onClick={launch}>
-            {running ? "Génération en cours..." : "Lancer la génération"}
+          <Button leftIcon={running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />} disabled={running || !semestreId} onClick={launch}>
+            {running ? "Génération en cours…" : "Lancer la génération"}
           </Button>
+
+          {/* Barre de progression */}
+          {running && (
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 font-medium text-emit-navy dark:text-emit-sky">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {etape}
+                </span>
+                <span className="font-bold tabular-nums text-emit-navy dark:text-emit-sky">{progress}%</span>
+              </div>
+              <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emit-navy to-emit-sky transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              {/* Étapes */}
+              <div className="flex justify-between pt-1">
+                {ETAPES.map((e, i) => (
+                  <div
+                    key={e}
+                    className="flex flex-col items-center gap-1"
+                    style={{ width: `${100 / ETAPES.length}%` }}
+                  >
+                    <div
+                      className={`h-2 w-2 rounded-full transition-colors duration-300 ${
+                        i <= etapeCourante ? "bg-emit-navy dark:text-emit-sky" : "bg-slate-300 dark:bg-slate-600"
+                      }`}
+                    />
+                    <span className={`text-[8px] text-center leading-tight ${
+                      i <= etapeCourante ? "text-emit-navy dark:text-emit-sky font-medium" : "text-slate-400 dark:text-slate-500"
+                    }`}>
+                      {e.split("…")[0]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardBody>
       </Card>
 
