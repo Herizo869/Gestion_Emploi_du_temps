@@ -69,8 +69,8 @@ export default function AdminHistorique() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Historique & journal</h1>
-          <p className="text-sm text-slate-500">{filtered.length} entrée{filtered.length > 1 ? "s" : ""}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Historique & journal</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{filtered.length} entrée{filtered.length > 1 ? "s" : ""}</p>
         </div>
         <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={exportCsv}>
           Exporter CSV
@@ -87,7 +87,7 @@ export default function AdminHistorique() {
                 type="date"
                 value={filterDate}
                 onChange={e => { setFilterDate(e.target.value); setPage(0); }}
-                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm focus:border-emit-blue focus:outline-none focus:ring-1 focus:ring-emit-blue"
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm focus:border-emit-blue focus:outline-none focus:ring-1 focus:ring-emit-blue dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               />
               {filterDate && (
                 <button
@@ -101,7 +101,7 @@ export default function AdminHistorique() {
             <select
               value={filterAction}
               onChange={e => { setFilterAction(e.target.value); setPage(0); }}
-              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
             >
               <option value="">Toutes actions</option>
               {actionsUniques.map(t => <option key={t}>{t}</option>)}
@@ -109,7 +109,7 @@ export default function AdminHistorique() {
             <select
               value={filterUser}
               onChange={e => { setFilterUser(e.target.value); setPage(0); }}
-              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
             >
               <option value="">Tous utilisateurs</option>
               {usersUniques.map(u => <option key={u}>{u}</option>)}
@@ -118,14 +118,14 @@ export default function AdminHistorique() {
 
           {/* Tableau */}
           {paged.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500">
               <Search className="h-10 w-10 mb-3" />
               {filterDate || filterAction || filterUser ? (
                 <>
                   <p className="text-sm">Aucune entrée ne correspond à vos filtres</p>
                   <button
                     onClick={() => { setFilterDate(""); setFilterAction(""); setFilterUser(""); }}
-                    className="mt-2 text-xs font-medium text-emit-sky hover:text-emit-navy"
+                    className="mt-2 text-xs font-medium text-emit-sky hover:text-emit-navy dark:hover:text-white"
                   >
                     Réinitialiser les filtres
                   </button>
@@ -138,7 +138,7 @@ export default function AdminHistorique() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
+                  <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-slate-700 dark:text-slate-400">
                     <th className="py-2.5 pr-3">Date / heure</th>
                     <th className="py-2.5 pr-3">Utilisateur</th>
                     <th className="py-2.5 pr-3">Action</th>
@@ -148,14 +148,14 @@ export default function AdminHistorique() {
                 </thead>
                 <tbody>
                   {paged.map((l) => (
-                    <tr key={l.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                      <td className="py-3 pr-3 font-mono text-xs text-slate-600">{l.date}</td>
-                      <td className="py-3 pr-3 text-slate-700">{l.utilisateur}</td>
+                    <tr key={l.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors dark:border-slate-700 dark:hover:bg-slate-800/50">
+                      <td className="py-3 pr-3 font-mono text-xs text-slate-600 dark:text-slate-400">{l.date}</td>
+                      <td className="py-3 pr-3 text-slate-700 dark:text-slate-300">{l.utilisateur}</td>
                       <td className="py-3 pr-3">
                         <Badge tone={tone[l.action]}>{l.action}</Badge>
                       </td>
-                      <td className="py-3 pr-3 text-slate-700">{l.entite}</td>
-                      <td className="py-3 pr-3 text-xs text-slate-500">
+                      <td className="py-3 pr-3 text-slate-700 dark:text-slate-300">{l.entite}</td>
+                      <td className="py-3 pr-3 text-xs text-slate-500 dark:text-slate-400">
                         {l.ancien && l.nouveau ? (
                           <span className="inline-flex items-center gap-1">
                             <span className="line-through text-red-500">{l.ancien}</span>

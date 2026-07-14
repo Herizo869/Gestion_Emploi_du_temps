@@ -2,6 +2,7 @@ using AutoMapper;
 using Emit.Api.Data;
 using Emit.Api.Dtos;
 using Emit.Api.Entities;
+using Emit.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,8 @@ namespace Emit.Api.Controllers;
 public class SallesController : ControllerBase
 {
     private readonly AppDbContext _db; private readonly IMapper _map;
-    public SallesController(AppDbContext db, IMapper map) { _db = db; _map = map; }
+    private readonly IEdtGeneratorService _gen;
+    public SallesController(AppDbContext db, IMapper map, IEdtGeneratorService gen) { _db = db; _map = map; _gen = gen; }
 
     [HttpGet] public async Task<ActionResult<IEnumerable<SalleDto>>> GetAll()
         => Ok(_map.Map<List<SalleDto>>(await _db.Salles.ToListAsync()));
@@ -55,5 +57,15 @@ public class SallesController : ControllerBase
         _db.Journal.Add(new LogEntry { Action = LogAction.Suppression, Entite = $"Salle {s.Numero}" });
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    [HttpPost("recalculate-occupation"), Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RecalculateOccupation()
+    {
+        await _gen.RecalculateOccupationsAsync();
+        _db.Journal.Add(new LogEntry { Action = LogAction.Modification, Entite = "Occupation des salles recalculée" });
+        await _db.SaveChangesAsync();
+        var salles = await _db.Salles.ToListAsync();
+        return Ok(_map.Map<List<SalleDto>>(salles));
     }
 }

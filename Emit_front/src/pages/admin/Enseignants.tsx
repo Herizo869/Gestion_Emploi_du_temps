@@ -154,8 +154,8 @@ export default function AdminEnseignants() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Enseignants</h1>
-          <p className="text-sm text-slate-500">Gestion du corps enseignant ({items.length})</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Enseignants</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Gestion du corps enseignant ({items.length})</p>
         </div>
         <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openAdd}>Ajouter</Button>
       </div>
@@ -170,7 +170,7 @@ export default function AdminEnseignants() {
               leftIcon={<Search className="h-4 w-4" />}
             />
             <select
-              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               value={statut}
               onChange={(e) => setStatut(e.target.value)}
             >
@@ -180,7 +180,7 @@ export default function AdminEnseignants() {
               <option value="Invite">Invité</option>
             </select>
             <select
-              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               value={specialite}
               onChange={(e) => setSpecialite(e.target.value)}
             >
@@ -202,8 +202,8 @@ export default function AdminEnseignants() {
 
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <AlertTriangle className="h-12 w-12 text-slate-300 mb-3" />
-              <p className="text-center text-slate-400">Aucun enseignant ne correspond à vos critères</p>
+              <AlertTriangle className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-3" />
+              <p className="text-center text-slate-400 dark:text-slate-500">Aucun enseignant ne correspond à vos critères</p>
             </div>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -216,10 +216,10 @@ export default function AdminEnseignants() {
                   <div
                     key={e.id}
                     onClick={() => navigate(`/admin/disponibilites?enseignant=${e.id}`)}
-                    className={`group rounded-xl border bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer ${
+                    className={`group rounded-xl border bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer dark:bg-slate-800 ${
                       isOverloaded
-                        ? "border-red-200 hover:border-red-300"
-                        : "border-slate-200 hover:border-emit-sky/40 hover:-translate-y-0.5"
+                        ? "border-red-200 hover:border-red-300 dark:border-red-800"
+                        : "border-slate-200 hover:border-emit-sky/40 hover:-translate-y-0.5 dark:border-slate-700"
                     }`}
                   >
                     {/* ── Header : avatar + actions ── */}
@@ -236,13 +236,11 @@ export default function AdminEnseignants() {
                           />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="font-semibold text-slate-900 truncate">{e.prenom} {e.nom}</h3>
-                          <p className="text-xs text-slate-500 truncate mt-0.5">{e.specialite}</p>
+                          <h3 className="font-semibold text-slate-900 truncate dark:text-slate-100">{e.prenom} {e.nom}</h3>
+                          <p className="text-xs text-slate-500 truncate mt-0.5 dark:text-slate-400">{e.specialite}</p>
                         </div>
                       </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          className="rounded-lg p-2 hover:bg-slate-100 transition-colors"
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">        <button className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                           title="Modifier"
                           onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}
                         >
@@ -261,31 +259,31 @@ export default function AdminEnseignants() {
                     {/* ── Informations ── */}
                     <div className="space-y-3 mb-4">
                       {/* Email */}
-                      <div className="flex items-center gap-2 text-sm bg-slate-50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2 text-sm bg-slate-50 rounded-lg px-3 py-2 dark:bg-slate-700/50">
                         <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <span className="text-slate-600 truncate flex-1">{e.email}</span>
+                        <span className="text-slate-600 truncate flex-1 dark:text-slate-300">{e.email}</span>
                         <button
                           onClick={() => copyEmail(e.email, e.id)}
-                          className="shrink-0 rounded-md p-1 hover:bg-slate-200 transition-colors"
+                          className="shrink-0 rounded-md p-1 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                           title={isCopied ? "Copié !" : "Copier l'email"}
                         >
                           {isCopied ? (
                             <Check className="h-3.5 w-3.5 text-green-600" />
                           ) : (
-                            <Copy className="h-3.5 w-3.5 text-slate-400" />
+                            <Copy className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                           )}
                         </button>
                       </div>
 
                       {/* Disponibilités (calculée par le backend) */}
                       <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <Clock className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
                         {e.heuresDisponibles != null ? (
-                          <span className="text-slate-600">
-                            <strong className="text-emit-navy">{e.heuresDisponibles}h</strong> disponibles cette semaine
+                          <span className="text-slate-600 dark:text-slate-300">
+                            <strong className="text-emit-navy dark:text-emit-sky">{e.heuresDisponibles}h</strong> disponibles cette semaine
                           </span>
                         ) : (
-                          <span className="text-slate-400 italic">Disponibilités non renseignées</span>
+                          <span className="text-slate-400 dark:text-slate-500 italic">Disponibilités non renseignées</span>
                         )}
                       </div>
 
@@ -309,19 +307,19 @@ export default function AdminEnseignants() {
                       {taux !== null && (
                         <div className="pt-1">
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-slate-500">Taux d'occupation</span>
-                            <span className={`font-semibold tabular-nums ${isOverloaded ? "text-red-600" : "text-slate-700"}`}>
+                            <span className="text-slate-500 dark:text-slate-400">Taux d'occupation</span>
+                            <span className={`font-semibold tabular-nums ${isOverloaded ? "text-red-600 dark:text-red-400" : "text-slate-700 dark:text-slate-300"}`}>
                               {occupationText(taux)}
                             </span>
                           </div>
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
                             <div
                               className={`h-full rounded-full transition-all ${occupationColor(taux)}`}
                               style={{ width: `${Math.min((taux ?? 0) * 100, 100)}%` }}
                             />
                           </div>
                           {isOverloaded && (
-                            <p className="mt-1 text-[10px] text-red-500 flex items-center gap-1">
+                            <p className="mt-1 text-[10px] text-red-500 dark:text-red-400 flex items-center gap-1">
                               <AlertTriangle className="h-3 w-3" />
                               Surchargé : heures planifiées &gt; heures disponibles
                             </p>
@@ -331,13 +329,13 @@ export default function AdminEnseignants() {
                     </div>
 
                     {/* ── Footer ── */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                       <Badge tone={statutTone[e.statut]}>
                         {e.statut.toLowerCase() === "permanent" ? "Permanent" : e.statut.toLowerCase() === "vacataire" ? "Vacataire" : "Invité"}
                       </Badge>
                       <button
                         onClick={() => navigate(`/admin/disponibilites?enseignant=${e.id}`)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-emit-navy hover:text-emit-sky transition-colors"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-emit-navy hover:text-emit-sky dark:text-slate-300 dark:hover:text-white transition-colors"
                       >
                         <Clock className="h-3 w-3" />
                         Disponibilités
@@ -350,7 +348,7 @@ export default function AdminEnseignants() {
             </div>
           )}
           <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>{filtered.length} résultat{filtered.length > 1 ? "s" : ""}</span>
+            <span className="dark:text-slate-400">{filtered.length} résultat{filtered.length > 1 ? "s" : ""}</span>
           </div>
         </CardBody>
       </Card>
@@ -366,7 +364,7 @@ export default function AdminEnseignants() {
           </>
         }
       >
-        {error && <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+        {error &&          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">{error}</p>}
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="Prénom" placeholder="Herizo" value={form.prenom} onChange={f("prenom")} />
           <Input label="Nom" placeholder="RAKOTO" value={form.nom} onChange={f("nom")} />
@@ -374,7 +372,7 @@ export default function AdminEnseignants() {
           <Input label="Spécialité" placeholder="Génie logiciel" value={form.specialite} onChange={f("specialite")} />
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Statut</label>
-          <select value={form.statut} onChange={f("statut")} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">              <option value="Permanent">Permanent</option>
+          <select value={form.statut} onChange={f("statut")} className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">              <option value="Permanent">Permanent</option>
               <option value="Vacataire">Vacataire</option>
               <option value="Invite">Invité</option>
           </select>
@@ -395,11 +393,11 @@ export default function AdminEnseignants() {
       >
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" />
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-slate-700 dark:text-slate-300">
             Supprimer <strong>{confirm?.prenom} {confirm?.nom}</strong> ? Cette action est irréversible.
           </p>
           {(confirm?.nbCours ?? 0) > 0 && (
-            <p className="mt-2 text-xs text-orange-600 flex items-center gap-1">
+            <p className="mt-2 text-xs text-orange-600 dark:text-orange-400 flex items-center gap-1">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               Cet enseignant a {confirm?.nbCours} cours assignés. La suppression peut affecter l'EDT.
             </p>

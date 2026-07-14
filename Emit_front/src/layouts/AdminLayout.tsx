@@ -3,7 +3,7 @@ import Navbar from "@/components/Navbar";
 
 export default function AdminLayout() {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-slate-50">
+    <div className="flex min-h-screen w-full flex-col bg-slate-50 dark:bg-slate-900">
       <Navbar role="admin" />
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-6 md:px-6">
         <Outlet />

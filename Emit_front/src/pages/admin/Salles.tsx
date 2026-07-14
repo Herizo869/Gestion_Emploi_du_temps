@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit2, Trash2, AlertTriangle, Search, Users, Building2, DoorOpen, TrendingUp, Layers } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertTriangle, Search, Users, Building2, DoorOpen, TrendingUp, Layers, RotateCcw, Loader2 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import { useData } from "@/context/DataContext";
-import { apiCreateSalle, apiUpdateSalle, apiDeleteSalle } from "@/lib/api";
+import { apiCreateSalle, apiUpdateSalle, apiDeleteSalle, apiRecalculateOccupation } from "@/lib/api";
 import type { Salle } from "@/types";
 
 const TYPE_CONFIG = {
@@ -39,8 +39,21 @@ export default function AdminSalles() {
   const [open, setOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Salle | null>(null);
   const [confirm, setConfirm] = useState<Salle | null>(null);
+
+  const handleRecalculate = async () => {
+    setRecalculating(true);
+    try {
+      await apiRecalculateOccupation();
+      await refresh();
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setRecalculating(false);
+    }
+  };
   const [form, setForm] = useState<Omit<Salle, "id">>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -158,57 +171,67 @@ export default function AdminSalles() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Salles</h1>
-          <p className="text-sm text-slate-500">{items.length} salles configurées</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Salles</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{items.length} salles configurées</p>
         </div>
-        <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openAdd}>
-          Ajouter une salle
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            leftIcon={recalculating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+            onClick={handleRecalculate}
+            disabled={recalculating}
+          >
+            {recalculating ? "Calcul..." : "Recalculer l'occupation"}
+          </Button>
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openAdd}>
+            Ajouter une salle
+          </Button>
+        </div>
       </div>
 
       {/* Statistiques */}
       <div className="grid gap-4 sm:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-700">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-blue-50 p-2.5">
               <Building2 className="h-5 w-5 text-emit-blue" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-              <p className="text-xs text-slate-500">Total salles</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.total}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Total salles</p>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-700">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-green-50 p-2.5">
               <DoorOpen className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{stats.disponibles}</p>
-              <p className="text-xs text-slate-500">Salles disponibles</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.disponibles}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Salles disponibles</p>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-700">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-purple-50 p-2.5">
               <Users className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{stats.capMoyenne}</p>
-              <p className="text-xs text-slate-500">Capacité moyenne</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.capMoyenne}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Capacité moyenne</p>
             </div>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-700">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-orange-50 p-2.5">
               <TrendingUp className="h-5 w-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{stats.occMoyenne}%</p>
-              <p className="text-xs text-slate-500">Occupation moyenne</p>
+              <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{stats.occMoyenne}%</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Occupation moyenne</p>
             </div>
           </div>
         </div>
@@ -225,18 +248,18 @@ export default function AdminSalles() {
                 placeholder="Rechercher..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-emit-blue focus:outline-none focus:ring-1 focus:ring-emit-blue"
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-emit-blue focus:outline-none focus:ring-1 focus:ring-emit-blue dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
             <select
-              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               value={filterType} onChange={e => setFilterType(e.target.value)}
             >
               <option value="">Tous types</option>
               {Object.keys(TYPE_CONFIG).map(t => <option key={t}>{t}</option>)}
             </select>
             <select
-              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               value={filterBatiment} onChange={e => setFilterBatiment(e.target.value)}
             >
               <option value="">Tous bâtiments</option>
@@ -259,8 +282,8 @@ export default function AdminSalles() {
 
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <AlertTriangle className="h-12 w-12 text-slate-300 mb-3" />
-              <p className="text-center text-slate-400">Aucune salle ne correspond à vos critères</p>
+              <AlertTriangle className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-3" />
+              <p className="text-center text-slate-400 dark:text-slate-500">Aucune salle ne correspond à vos critères</p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -270,7 +293,7 @@ export default function AdminSalles() {
                   <div
                     key={s.id}
                     onClick={() => navigate(`/admin/edt`)}
-                    className="group rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                    className="group rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer dark:border-slate-700 dark:from-slate-800 dark:to-slate-700"
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between mb-3">
@@ -280,17 +303,17 @@ export default function AdminSalles() {
                         </div>
                         <div>
                           <h3 className="font-semibold text-slate-800 text-lg leading-tight">{s.numero}</h3>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
                             <Building2 className="inline h-3 w-3 mr-0.5" />
                             Bâtiment {s.batiment}
                           </p>
                         </div>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="rounded p-2 hover:bg-slate-200 transition-colors" title="Modifier" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
+                        <button className="rounded p-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" title="Modifier" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
                           <Edit2 className="h-4 w-4 text-slate-600" />
                         </button>
-                        <button className="rounded p-2 hover:bg-red-100 transition-colors" title="Supprimer" onClick={(e) => { e.stopPropagation(); setConfirm(s); }}>
+                        <button className="rounded p-2 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors" title="Supprimer" onClick={(e) => { e.stopPropagation(); setConfirm(s); }}>
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </button>
                       </div>
@@ -299,15 +322,15 @@ export default function AdminSalles() {
                     {/* Type et capacité */}
                     <div className="flex items-center justify-between mb-3">
                       <Badge tone={cfg.tone}>{cfg.icon} {s.type}</Badge>
-                      <span className="text-sm text-slate-600">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
                         <Users className="inline h-3.5 w-3.5 mr-1" />
                         {s.capacite} places
                       </span>
                     </div>
 
                     {/* Disponibilité */}
-                    <div className="flex items-center justify-between py-2.5 px-3 bg-slate-50 rounded-lg mb-3">
-                      <span className="text-sm font-medium text-slate-700">Disponible</span>
+                    <div className="flex items-center justify-between py-2.5 px-3 bg-slate-50 rounded-lg mb-3 dark:bg-slate-700/50">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Disponible</span>
                       <button onClick={() => toggleDispo(s)} className="focus:outline-none">
                         <span className={`relative inline-block h-6 w-11 rounded-full transition-all duration-200 ${s.disponible ? "bg-green-500 shadow-sm shadow-green-200" : "bg-slate-300"}`}>
                           <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200 ${s.disponible ? "left-5" : "left-0.5"}`} />
@@ -316,14 +339,14 @@ export default function AdminSalles() {
                     </div>
 
                     {/* Occupation */}
-                    <div className="pt-3 border-t border-slate-100">
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-700">
                       <div className="flex items-center justify-between text-sm mb-1.5">
-                        <span className="text-slate-600">Occupation</span>
-                        <span className={`font-semibold tabular-nums ${s.occupation > 90 ? "text-red-600" : s.occupation > 70 ? "text-orange-600" : "text-slate-700"}`}>
+                        <span className="text-slate-600 dark:text-slate-400">Occupation</span>
+                        <span className={`font-semibold tabular-nums ${s.occupation > 90 ? "text-red-600 dark:text-red-400" : s.occupation > 70 ? "text-orange-600 dark:text-orange-400" : "text-slate-700 dark:text-slate-300"}`}>
                           {s.occupation}%
                         </span>
                       </div>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                         <div
                           className={`h-full transition-all duration-500 rounded-full ${occupationColor(s.occupation)}`}
                           style={{ width: `${s.occupation}%` }}
@@ -335,7 +358,7 @@ export default function AdminSalles() {
               })}
             </div>
           )}
-          <div className="mt-3 text-xs text-slate-500">{filtered.length} résultat(s)</div>
+          <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">{filtered.length} résultat(s)</div>
         </CardBody>
       </Card>
 
@@ -354,7 +377,7 @@ export default function AdminSalles() {
         }
       >
         {error && (
-          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
             {error}
           </p>
         )}
@@ -379,7 +402,7 @@ export default function AdminSalles() {
             onChange={updateForm("capacite")} 
           />
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Type</label>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
             <select 
               value={form.type} 
               onChange={updateForm("type")} 
@@ -418,15 +441,15 @@ export default function AdminSalles() {
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500 shrink-0" />
           <div>
-            <p className="text-sm text-slate-700">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
               Supprimer la salle <strong>{confirm?.numero}</strong> ?
             </p>
             {confirm && confirm.occupation > 0 && (
-              <p className="mt-1 text-xs text-orange-600">
+              <p className="mt-1 text-xs text-orange-600 dark:text-orange-400">
                 ⚠️ Cette salle a {confirm.occupation}% d'occupation — la suppression peut affecter l'EDT.
               </p>
             )}
-            <p className="mt-1 text-xs text-slate-400">Cette action est irréversible.</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Cette action est irréversible.</p>
           </div>
         </div>
       </Modal>

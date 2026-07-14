@@ -53,7 +53,7 @@ namespace Emit.Api.Migrations
 
                     b.HasIndex("NiveauId");
 
-                    b.ToTable("Cours");
+                    b.ToTable("Cours", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.CoursEnseignant", b =>
@@ -68,7 +68,7 @@ namespace Emit.Api.Migrations
 
                     b.HasIndex("EnseignantId");
 
-                    b.ToTable("CoursEnseignants");
+                    b.ToTable("CoursEnseignants", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.Disponibilite", b =>
@@ -114,7 +114,7 @@ namespace Emit.Api.Migrations
                     b.HasIndex("EnseignantId", "SemestreId", "CoursId", "Jour", "Creneau")
                         .IsUnique();
 
-                    b.ToTable("Disponibilites");
+                    b.ToTable("Disponibilites", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.Enseignant", b =>
@@ -153,7 +153,7 @@ namespace Emit.Api.Migrations
                     b.HasIndex("SupabaseAuthUserId")
                         .IsUnique();
 
-                    b.ToTable("Enseignants");
+                    b.ToTable("Enseignants", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.Filiere", b =>
@@ -181,7 +181,7 @@ namespace Emit.Api.Migrations
 
                     b.HasIndex("NiveauId");
 
-                    b.ToTable("Filieres");
+                    b.ToTable("Filieres", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.LogEntry", b =>
@@ -215,7 +215,7 @@ namespace Emit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Journal");
+                    b.ToTable("Journal", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.Niveau", b =>
@@ -232,7 +232,7 @@ namespace Emit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Niveaux");
+                    b.ToTable("Niveaux", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.Notification", b =>
@@ -265,7 +265,7 @@ namespace Emit.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.Salle", b =>
@@ -299,7 +299,7 @@ namespace Emit.Api.Migrations
                     b.HasIndex("Numero")
                         .IsUnique();
 
-                    b.ToTable("Salles");
+                    b.ToTable("Salles", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.Semestre", b =>
@@ -324,7 +324,7 @@ namespace Emit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Semestres");
+                    b.ToTable("Semestres", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.SlotEDT", b =>
@@ -381,7 +381,7 @@ namespace Emit.Api.Migrations
                     b.HasIndex("SemestreId", "Jour", "HeureDebut", "NiveauId", "FiliereId")
                         .IsUnique();
 
-                    b.ToTable("Slots");
+                    b.ToTable("Slots", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.SystemSettings", b =>
@@ -442,7 +442,7 @@ namespace Emit.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SystemSettings");
+                    b.ToTable("SystemSettings", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.User", b =>
@@ -483,7 +483,7 @@ namespace Emit.Api.Migrations
 
                     b.HasIndex("EnseignantId");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("Emit.Api.Entities.UserProfile", b =>

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* ── Class-based dark mode (Tailwind v4) ── */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-emit-navy: #0D1B4B;
   --color-emit-navy-dark: #081234;
@@ -10,12 +13,138 @@
   --color-cm: #0D1B4B;
   --color-td: #7EC8E3;
   --color-tp: #22c55e;
+
+  /* Dark-mode overrides */
+  --color-emit-navy-dark-bg: #0f172a;
+  --color-emit-navy-dark-card: #1e293b;
+  --color-emit-navy-dark-border: #334155;
+  --color-emit-sky-dark-text: #93c5fd;
+  --color-emit-light-dark: #1e3a5f;
+
+  /* Animations */
+  --animate-fadeIn: fadeIn 0.3s ease-out;
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-spin-slow: spin-slow 8s linear infinite;
+  --animate-scanline: scanline 8s linear infinite;
 }
 
+/* ══════════════════════════════════════════════════
+   KEYFRAMES FUTURISTES
+   ══════════════════════════════════════════════════ */
+
+/* Glissement d'entrée */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Pulse lumineux (effet néon) */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(126, 200, 227, 0.3); }
+  50%      { box-shadow: 0 0 20px rgba(126, 200, 227, 0.6), 0 0 40px rgba(126, 200, 227, 0.2); }
+}
+
+/* Gradient animé pour bordures */
+@keyframes border-glow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Shimmer text (déjà dans Landing) */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Rotation lente pour décors */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Floating pour éléments décoratifs */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-10px); }
+}
+
+/* Breathing glow (bords de cartes) */
+@keyframes breathe {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.8; }
+}
+
+/* Scan line effet */
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* ══════════════════════════════════════════════════
+   CLASSES UTILITAIRES FUTURISTES
+   ══════════════════════════════════════════════════ */
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass,
+.glass.dark {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(126, 200, 227, 0.12);
+}
+
+/* Glow card (au hover) */
+.glow-card {
+  transition: box-shadow 0.4s ease, transform 0.4s ease;
+}
+.glow-card:hover {
+  box-shadow:
+    0 0 20px rgba(126, 200, 227, 0.10),
+    0 0 40px rgba(126, 200, 227, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Neon glow sur les bordures (pour cartes actives) */
+.neon-border {
+  position: relative;
+}
+.neon-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(126, 200, 227, 0.5), rgba(79, 168, 204, 0.2), rgba(126, 200, 227, 0.3));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.neon-border:hover::before {
+  opacity: 1;
+  animation: border-glow 3s ease infinite;
+  background-size: 200% 200%;
+}
+
+/* Dot pattern décoratif (cyber-grid) */
+.cyber-dot {
+  background-image: radial-gradient(rgba(126, 200, 227, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ══════════════════════════════════════════════════
+   STYLES GLOBAUX
+   ══════════════════════════════════════════════════ */
 
 html,
 body,
@@ -32,20 +161,53 @@ body {
     #f6f9fc;
   color: #0D1B4B;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ── Dark body ── */
+.dark body,
+body.dark {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(59, 130, 246, 0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(15, 23, 42, 0.6), transparent 60%),
+    #0b1121;
+  color: #e2e8f0;
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* ── Scrollbar futuriste ── */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
+::-webkit-scrollbar-track {
+  background: transparent;
+}
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: linear-gradient(180deg, #cbd5e1, #94a3b8);
   border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #7EC8E3;
+  background: linear-gradient(180deg, #7EC8E3, #4FA8CC);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #334155, #475569);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #64748b, #7EC8E3);
+  border: 2px solid transparent;
+  background-clip: content-box;
 }

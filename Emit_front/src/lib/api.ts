@@ -69,11 +69,35 @@ export interface AuthResponse {
   token: string;
   user: AuthResponseUser;
 }
-export const apiLogin = (email: string, password: string) =>
-  request<AuthResponse>("/api/auth/login", {
+export const apiLogin = async (email: string, password: string): Promise<AuthResponse> => {
+  // 🔥 Appel direct sans passer par `request()` car le 401 du login
+  //    signifie "mot de passe incorrect côté C#", PAS "session expirée".
+  //    Le `request()` déconnecterait Supabase pour un 401, ce qui est
+  //    catastrophique quand Supabase et C# sont désynchronisés.
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  const token = await getAccessToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
+    headers,
     body: JSON.stringify({ email, password }),
   });
+
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const j = await res.json();
+      msg = j.message ?? j.error ?? msg;
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+
+  return (await res.json()) as AuthResponse;
+};
 
 export const apiMe = () => request<MeResponse>("/api/auth/me");
 export const apiUpdateProfile = (data: { prenom: string; nom: string; email: string }) =>
@@ -101,6 +125,9 @@ export const apiUpdateSalle = (id: string, s: Partial<Salle>) =>
   request<Salle>(`/api/salles/${id}`, { method: "PUT", body: JSON.stringify(s) });
 export const apiDeleteSalle = (id: string) =>
   request<void>(`/api/salles/${id}`, { method: "DELETE" });
+
+export const apiRecalculateOccupation = () =>
+  request<Salle[]>("/api/salles/recalculate-occupation", { method: "POST" });
 
 // ───── Niveaux & Filières ──────────────────────────────────
 export const apiNiveaux = () => request<Niveau[]>("/api/niveaux");
@@ -209,6 +236,8 @@ export interface ExportParams { semestreId?: string; niveauId?: string; filiereI
 
 export interface EdtCheckParams { enseignantId: string; semestreId: string; }
 
+// ───── Vérification EDT enseignant ─────────────────────────
+
 export const apiGetEdt = (params: EdtCheckParams) =>
   request<SlotEDT[]>(`/api/edt?enseignantId=${params.enseignantId}&semestreId=${params.semestreId}`);
 
@@ -222,13 +251,51 @@ function buildExportQuery(params: ExportParams) {
   return q.toString();
 }
 
-async function downloadFile(path: string, filename: string) {
+async function downloadFile(path: string, filename: string, onProgress?: (pct: number) => void) {
   const headers = new Headers();
   const token = await getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const res = await fetch(`${BASE}${path}`, { headers });
   if (!res.ok) throw new Error(`Échec du téléchargement (${res.status})`);
-  const blob = await res.blob();
+
+  const contentLength = res.headers.get("Content-Length");
+  const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+  let blob: Blob;
+
+  if (total > 0 && onProgress && res.body) {
+    // Lecture par flux pour suivre la progression réelle
+    const reader = res.body.getReader();
+    const chunks: BlobPart[] = [];
+    let received = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      onProgress(Math.min(Math.round((received / total) * 100), 100));
+    }
+
+    blob = new Blob(chunks);
+  } else if (onProgress) {
+    // Pas de Content-Length → simulation fluide
+    let sim = 0;
+    const interval = setInterval(() => {
+      sim = Math.min(sim + Math.random() * 12, 90);
+      onProgress(Math.round(sim));
+    }, 200);
+    try {
+      blob = await res.blob();
+    } finally {
+      clearInterval(interval);
+    }
+  } else {
+    blob = await res.blob();
+  }
+
+  onProgress?.(100);
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

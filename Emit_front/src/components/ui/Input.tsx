@@ -17,7 +17,7 @@ export default function Input({
   return (
     <div className="w-full">
       {label && (
-        <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-700">
+        <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
           {label}
         </label>
       )}
@@ -30,10 +30,10 @@ export default function Input({
         <input
           id={id}
           {...props}
-          className={`h-11 w-full rounded-lg border bg-white text-sm outline-none transition focus:border-emit-blue focus:ring-2 focus:ring-emit-blue/20 ${
+          className={`h-11 w-full rounded-lg border bg-white text-sm outline-none transition focus:border-emit-blue focus:ring-2 focus:ring-emit-blue/20 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 ${
             leftIcon ? "pl-10" : "pl-3"
           } ${rightIcon ? "pr-10" : "pr-3"} ${
-            error ? "border-red-400" : "border-slate-300"
+            error ? "border-red-400 dark:border-red-500" : "border-slate-300 dark:border-slate-600"
           } ${className}`}
         />
         {rightIcon && (
