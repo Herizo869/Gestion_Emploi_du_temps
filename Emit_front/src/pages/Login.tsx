@@ -111,11 +111,6 @@ export default function Login() {
 
         {/* ── Connexion ── */}
         <>
-          <h2 className="mb-5 text-center text-xl font-semibold text-slate-800 dark:text-slate-100">
-            <LogIn className="mb-1 mr-2 inline-block h-5 w-5 text-emit-blue" />
-            Connexion
-          </h2>
-
           {/* Bannière erreur */}
           <ErrorBanner message={err} />
 
@@ -153,9 +148,6 @@ export default function Login() {
               {loading ? "Connexion en cours…" : "Se connecter"}
             </Button>
           </form>
-
-          {/* Accès rapide dev */}
-          <DevFill onFill={(e, p) => { setEmail(e); setPwd(p); }} />
         </>
       </div>
     </div>
@@ -174,38 +166,3 @@ function ErrorBanner({ message }: { message: string | null }) {
   );
 }
 
-// Accès rapide pour le développement
-// Admin : compte Supabase existant de l'utilisateur
-// Enseignant : identifiants du DbSeeder
-function DevFill({ onFill }: { onFill: (email: string, pwd: string) => void }) {
-  return (
-    <div className="mt-6 border-t border-slate-100 dark:border-slate-700 pt-4">
-      <p className="mb-2 text-center text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500">
-        Accès rapide (dev)
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          id="dev-admin"
-          variant="outline"
-          size="sm"
-          onClick={() => onFill("miaroandriamanalintsoa007@gmail.com", "Miaroandria007***")}
-          title="Compte Admin Supabase"
-        >
-          Admin
-        </Button>
-        <Button
-          id="dev-teacher"
-          variant="outline"
-          size="sm"
-          onClick={() => onFill("herizo@emit.mg", "Enseignant@123")}
-          title="herizo@emit.mg — rôle Enseignant (DbSeeder)"
-        >
-          Enseignant
-        </Button>
-      </div>
-      <p className="mt-1 text-center text-[10px] text-slate-300 dark:text-slate-600">
-        Admin : miaroandriamanalintsoa007@gmail.com
-      </p>
-    </div>
-  );
-}
