@@ -255,7 +255,7 @@ async function downloadFile(path: string, filename: string, onProgress?: (pct: n
   const headers = new Headers();
   const token = await getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const res = await fetch(`${BASE}${path}`, { headers });
+  const res = await fetch(`${BASE}${path}`, { headers, credentials: "include" });
   if (!res.ok) throw new Error(`Échec du téléchargement (${res.status})`);
 
   const contentLength = res.headers.get("Content-Length");
@@ -306,10 +306,10 @@ async function downloadFile(path: string, filename: string, onProgress?: (pct: n
   URL.revokeObjectURL(url);
 }
 
-export const apiDownloadPdf = (params: ExportParams = {}) =>
-  downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf");
-export const apiDownloadCsv = (params: ExportParams = {}) =>
-  downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv");
+export const apiDownloadPdf = (params: ExportParams = {}, onProgress?: (pct: number) => void) =>
+  downloadFile(`/api/export/pdf?${buildExportQuery(params)}`, "edt.pdf", onProgress);
+export const apiDownloadCsv = (params: ExportParams = {}, onProgress?: (pct: number) => void) =>
+  downloadFile(`/api/export/csv?${buildExportQuery(params)}`, "edt.csv", onProgress);
 
 // ───── Paramètres système ───────────────────────────────────
 export interface SystemSettingsData {

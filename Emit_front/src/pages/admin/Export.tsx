@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileText, FileSpreadsheet, Link2, Upload, Check, History as HistoryIcon, Trash2 } from "lucide-react";
+import { Download, FileText, FileSpreadsheet, Link2, Upload, Check, Loader2, History as HistoryIcon, Trash2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import Button from "@/components/ui/Button";
@@ -45,7 +45,6 @@ export default function AdminExport() {
   const [slots, setSlots] = useState<SlotEDT[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [progress, setProgress] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
@@ -94,12 +93,10 @@ export default function AdminExport() {
 
   const download = async (kind: "pdf-portrait" | "pdf-paysage" | "csv") => {
     setDownloading(kind);
-    setProgress((prev) => ({ ...prev, [kind]: 0 }));
     setError(null);
     try {
       if (kind === "csv") await apiDownloadCsv(exportParams);
       else await apiDownloadPdf({ ...exportParams, orientation: kind === "pdf-paysage" ? "paysage" : "portrait" });
-      setProgress((prev) => ({ ...prev, [kind]: 100 }));
 
       // Enregistrer dans l'historique
       const entry: ExportHistoryEntry = {
@@ -214,17 +211,9 @@ export default function AdminExport() {
               <p className="text-xs text-slate-500 dark:text-slate-400">Compact — idéal affichage mural</p>
             </div>
             {downloading === "pdf-portrait" ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-emit-navy dark:text-emit-sky">Téléchargement…</span>
-                  <span className="font-bold text-emit-navy dark:text-emit-sky">{progress["pdf-portrait"] ?? 0}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-emit-navy to-emit-sky transition-all duration-300 ease-out"
-                    style={{ width: `${progress["pdf-portrait"] ?? 0}%` }}
-                  />
-                </div>
+              <div className="flex items-center gap-2 text-sm font-medium text-emit-navy dark:text-emit-sky">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Téléchargement…</span>
               </div>
             ) : (
               <Button fullWidth leftIcon={<Download className="h-4 w-4" />} disabled={downloading !== null} onClick={() => download("pdf-portrait")}>
@@ -241,17 +230,9 @@ export default function AdminExport() {
               <p className="text-xs text-slate-500 dark:text-slate-400">Planning détaillé</p>
             </div>
             {downloading === "pdf-paysage" ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-emit-blue">Téléchargement…</span>
-                  <span className="font-bold text-emit-blue">{progress["pdf-paysage"] ?? 0}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-300 ease-out"
-                    style={{ width: `${progress["pdf-paysage"] ?? 0}%` }}
-                  />
-                </div>
+              <div className="flex items-center gap-2 text-sm font-medium text-emit-blue">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Téléchargement…</span>
               </div>
             ) : (
               <Button fullWidth leftIcon={<Download className="h-4 w-4" />} disabled={downloading !== null} onClick={() => download("pdf-paysage")}>
@@ -268,17 +249,9 @@ export default function AdminExport() {
               <p className="text-xs text-slate-500 dark:text-slate-400">Données brutes</p>
             </div>
             {downloading === "csv" ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium text-green-600">Téléchargement…</span>
-                  <span className="font-bold text-green-600">{progress["csv"] ?? 0}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-300 ease-out"
-                    style={{ width: `${progress["csv"] ?? 0}%` }}
-                  />
-                </div>
+              <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Téléchargement…</span>
               </div>
             ) : (
               <Button fullWidth variant="secondary" leftIcon={<Download className="h-4 w-4" />} disabled={downloading !== null} onClick={() => download("csv")}>

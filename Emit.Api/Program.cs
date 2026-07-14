@@ -236,7 +236,15 @@ builder.Services.AddAuthorization();
 // --- CORS ---
 var origins = cfg.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(o => o.AddPolicy("Front", p =>
-    p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+    p.SetIsOriginAllowed(origin =>
+        {
+            if (args.Contains("--allow-all-origins")) return true;
+            return origins.Any(o => o.Equals(origin, StringComparison.OrdinalIgnoreCase));
+        })
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+        .WithExposedHeaders("Content-Disposition", "Content-Length")));
 
 // --- API + Swagger ---
 builder.Services.AddControllers()
