@@ -2,9 +2,9 @@ import type { SlotEDT } from "@/types";
 import { CRENEAUX, JOURS } from "@/data/mock";
 
 const typeStyles: Record<SlotEDT["type"], string> = {
-  CM: "bg-emit-navy text-white",
-  TD: "bg-sky-200 text-sky-900",
-  TP: "bg-green-200 text-green-900",
+  CM: "bg-gradient-to-br from-emit-navy to-[#162a5e] text-white shadow-sm shadow-emit-navy/20",
+  TD: "bg-gradient-to-br from-sky-100 to-sky-200 text-sky-900 shadow-sm shadow-sky-200/40",
+  TP: "bg-gradient-to-br from-green-100 to-green-200 text-green-900 shadow-sm shadow-green-200/40",
 };
 
 type Block = { slot: SlotEDT; span: number };
@@ -74,7 +74,7 @@ export default function WeeklyGrid({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <table className="w-full min-w-[720px] border-collapse text-sm">
         <thead>
           <tr>
@@ -118,22 +118,27 @@ export default function WeeklyGrid({
                     {block ? (
                       <button
                         onClick={() => onClickSlot?.(block.slot)}
-                        className={`m-1 w-[calc(100%-0.5rem)] rounded-md px-2 py-1.5 text-left text-xs ${typeStyles[block.slot.type]} hover:opacity-90`}
+                        className={`group/btn m-1 w-[calc(100%-0.5rem)] rounded-lg px-2.5 py-2 text-left text-xs transition-all duration-200 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] ${typeStyles[block.slot.type]}`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold">{block.slot.type}</span>
-                          <span className="opacity-80">{block.slot.salle}</span>
+                          <span className="font-bold tracking-wide">{block.slot.type}</span>
+                          <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-medium backdrop-blur-sm">
+                            {block.slot.salle}
+                          </span>
                         </div>
-                        <p className="mt-0.5 truncate font-medium">{block.slot.intitule}</p>
-                        <p className="truncate opacity-80">{block.slot.enseignant}</p>
+                        <p className="mt-1 truncate text-xs font-semibold">{block.slot.intitule}</p>
+                        <p className="mt-0.5 truncate text-[10px] opacity-80 flex items-center gap-1">
+                          <span className="inline-block h-1 w-1 rounded-full bg-white/60" />
+                          {block.slot.enseignant}
+                        </p>
                         {block.span > 1 && (
-                          <p className="mt-0.5 text-[10px] opacity-70">
+                          <p className="mt-1 text-[10px] font-medium opacity-75">
                             {block.slot.debut} - {CRENEAUX[rowIdx + block.span - 1].split(" - ")[1]}
                           </p>
                         )}
                       </button>
                     ) : (
-                      <div className="px-3 py-3 text-center text-xs text-slate-300 dark:text-slate-600">—</div>
+                      <div className="px-3 py-3 text-center text-xs text-slate-200 dark:text-slate-700">—</div>
                     )}
                   </td>
                 );

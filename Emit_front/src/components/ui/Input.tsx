@@ -30,10 +30,10 @@ export default function Input({
         <input
           id={id}
           {...props}
-          className={`h-11 w-full rounded-lg border bg-white text-sm outline-none transition focus:border-emit-blue focus:ring-2 focus:ring-emit-blue/20 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 ${
+          className={`h-11 w-full rounded-lg border bg-white text-sm outline-none transition-all duration-200 focus:border-emit-blue focus:ring-2 focus:ring-emit-blue/20 focus:shadow-[0_0_12px_rgba(126,200,227,0.2)] dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-emit-sky dark:focus:ring-emit-sky/20 ${
             leftIcon ? "pl-10" : "pl-3"
           } ${rightIcon ? "pr-10" : "pr-3"} ${
-            error ? "border-red-400 dark:border-red-500" : "border-slate-300 dark:border-slate-600"
+            error ? "border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-red-200 dark:focus:ring-red-800" : "border-slate-300 dark:border-slate-600"
           } ${className}`}
         />
         {rightIcon && (

@@ -39,6 +39,24 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Scale up entrance (modals) */
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Slide down */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Slide up (modals) */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 /* Pulse lumineux (effet néon) */
 @keyframes glow-pulse {
   0%, 100% { box-shadow: 0 0 8px rgba(126, 200, 227, 0.3); }
